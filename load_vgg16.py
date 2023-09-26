@@ -35,7 +35,7 @@ def get_dataloader(data_dir, batch_size=32):
 
 def main():
     # paths
-    model_checkpoint = "models/VGG16_FF_2023_05_11_221428.pt"
+    model_checkpoint = "models/VGG16_FF_2023_05_11_2214281.pt"
     data_dir = "real_data/"
     # initialize model
     model = initialize_model(model_checkpoint)
