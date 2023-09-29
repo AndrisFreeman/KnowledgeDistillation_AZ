@@ -33,6 +33,7 @@ def get_moblienet3(pretrained = True, n_classes=4, greyscale=True):
         for param in model.features.parameters():
             param.requires_grad = True
     return model
+
 def get_resnet18(pretrained = True, n_classes=4, greyscale=True):
     if pretrained:
         model = models.resnet18(weights = 'ResNet18_Weights.IMAGENET1K_V1')
@@ -52,7 +53,7 @@ def get_resnet18(pretrained = True, n_classes=4, greyscale=True):
 
 model_dict = {
     "mobilenet_V2": get_moblienet2,
-    "mobilenet_V2": get_moblienet3,
+    "mobilenet_V3": get_moblienet3,
     "resnet18": get_resnet18
 }
 
