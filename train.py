@@ -10,7 +10,6 @@ import json
 import itertools
 import os
 from copy import deepcopy
-from queue import Queue
 import torch.nn.functional as F
 
 from util import EarlyStopper
@@ -232,7 +231,7 @@ def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, 
         config_dict[key] = value
 
     with open(f'results/{output_file_name}.json', 'w') as fp:
-        json.dump(res_report, fp)
+        json.dump(config_dict, fp, indent=2)
     return res_report
 
 def construct_result_filename(config_dict):

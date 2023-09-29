@@ -1,0 +1,41 @@
+{
+  "num_epochs": 2,
+  "lr": 0.001,
+  "bs": 64,
+  "weight_decay": 0.0001,
+  "student_model_name": "mobilenet-V3",
+  "data_dir": "real_data",
+  "n_classes": 4,
+  "T": 0.8,
+  "loss_ratio": 0.5,
+  "greyscale": false,
+  "pretrained": false,
+  "filename": "mobilenet-V3_num_epochs-2_lr-0.001_bs-64_weight_decay-0.0001_data_dir-real_data_n_classes-4_T-0.8_loss_ratio-0.5_greyscale-False_pretrained-False",
+  "train_speed": [
+    15.377271890640259,
+    11.529447317123413
+  ],
+  "inference_speed": [
+    0.9867815971374512,
+    1.051114559173584
+  ],
+  "student_memory": 5.852264404296875,
+  "student_num_params": 1521956,
+  "train_loss": [
+    0.7332601062953472,
+    0.7291103266179562
+  ],
+  "val_loss": [
+    0.7533164918422699,
+    0.7533164918422699
+  ],
+  "train_acc": [
+    0.3162109386175871,
+    0.4488281272351742
+  ],
+  "val_acc": [
+    0.05902777798473835,
+    0.2421875
+  ],
+  "F1_score": []
+}

@@ -52,8 +52,8 @@ def get_resnet18(pretrained = True, n_classes=4, greyscale=True):
 
 
 model_dict = {
-    "mobilenet_V2": get_moblienet2,
-    "mobilenet_V3": get_moblienet3,
+    "mobilenet-V2": get_moblienet2,
+    "mobilenet-V3": get_moblienet3,
     "resnet18": get_resnet18
 }
 
