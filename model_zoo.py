@@ -2,18 +2,18 @@ import torchvision.models as models
 import torch.nn as nn
 import torch
 
-def get_moblienet2(pretrained = True, n_classes=4, greyscale=True):
+def get_moblienet2(pretrained = True, num_classes=4, greyscale=True):
 
     if pretrained:
         model = models.mobilenet_v2(weights='MobileNet_V2_Weights.IMAGENET1K_V1')
         for param in model.features.parameters():
             param.requires_grad = False
         model.features[0][0].in_channels = 1
-        model.classifier[1].out_features = n_classes
+        model.classifier[1].out_features = num_classes
     else:
-        model = models.mobilenet_v2(weights=None)
+        model = models.mobilenet_v2(weights=None, num_classes=num_classes)
         model.features[0][0].in_channels = 1
-        model.classifier[1].out_features = n_classes
+        model.classifier[1].out_features = num_classes
         for param in model.features.parameters():
             param.requires_grad = True
     return model
@@ -27,7 +27,7 @@ def get_moblienet3(pretrained = True, n_classes=4, greyscale=True):
         model.features[0][0].in_channels = 1
         model.classifier[3].out_features = n_classes
     else:
-        model = models.mobilenet_v3_small(weights=None)
+        model = models.mobilenet_v3_small(weights=None, num_classes=n_classes)
         model.features[0][0].in_channels = 1
         model.classifier[3].out_features = n_classes
         for param in model.features.parameters():
@@ -42,7 +42,7 @@ def get_resnet18(pretrained = True, n_classes=4, greyscale=True):
         model.fc.out_features = n_classes
         model.conv1.in_channels = 1
     else:
-        model = models.resnet18(weights = None)
+        model = models.resnet18(weights = None, num_classes=n_classes)
         model.fc.out_features = n_classes
         model.conv1.in_channels = 1
         for param in model.parameters():
@@ -58,6 +58,6 @@ model_dict = {
 }
 
 if __name__ == "__main__":
-    model_1 = get_moblienet2(4)
-    model_2 = get_resnet18(4)
-    model_3 = get_moblienet3(4)
+    model_1 = get_moblienet2()
+    model_2 = get_resnet18()
+    model_3 = get_moblienet3()

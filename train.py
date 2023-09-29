@@ -36,15 +36,19 @@ def prep_directories():
         print("Results directory already exists")
 
 def run_experiment(config):
-    config_dict = make_grid(config)[os.getenv("SLURM_ARRAY_TASK_ID")]
+    try:
+        config_dict = make_grid(config)[os.getenv("SLURM_ARRAY_TASK_ID")]
+    except:
+        print("not running sbatch array")
+        config_dict = make_grid(config)[0]
     prep_directories()
     train_dataloader, val_dataloader = get_dataloader(config_dict.get("data_dir", "real_data"), config_dict.get("bs", 64))
     teacher_model = initialize_teacher_model(n_classes=config_dict.get("n_classes", 4))
-    student_model = model_dict[config_dict.get("student_model_name")]()
+    student_model = model_dict[config_dict.get("student_model_name")](config_dict.get("pretrained", False))
     optimizer = Adam(params=student_model.parameters(), lr=config_dict.get("lr", 0.001))
     loss_fn = nn.CrossEntropyLoss()
     param_num, size_all_mb = get_model_size(student_model)
-    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("student_model_name"), config_dict.get("loss_ratio"), config_dict.get("greyscale"))
+    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("T"), config_dict.get("loss_ratio"), config_dict.get("greyscale"))
     res_dict = get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb)
     save_model(config_dict, best_model_params)
 
@@ -131,7 +135,7 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         # early stop
         if early_stopper.early_stop(val_acc):
             break
-        print(f"Best achieved val acc: {best_val_acc}")
+    print(f"Best achieved val acc: {best_val_acc}")
     return best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times
 
 def temperature_softmax(logits, T):
@@ -232,10 +236,10 @@ def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, 
     return res_report
 
 def construct_result_filename(config_dict):
-    filename = [config_dict["model_name"]]
+    filename = [config_dict["student_model_name"]]
     for key, value in config_dict.items():
-        if key != "model_name":
-            filename.append(f"{key}:{value}")
+        if key != "student_model_name":
+            filename.append(f"{key}-{value}")
     return "_".join(filename)
 
 
