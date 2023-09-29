@@ -1,7 +1,7 @@
 {
     "num_epochs": [30],
     "lr": [0.001, 0.005],
-    "bs": [32],
+    "bs": [64],
     "weight_decay":[0.0001],
     "student_model_name":["mobilenet_V3"],
     "data_dir": ["real_data"],

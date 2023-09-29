@@ -12,6 +12,8 @@ import os
 from copy import deepcopy
 from queue import Queue
 import torch.nn.functional as F
+
+from util import EarlyStopper
 torch.manual_seed(1)
 
 
@@ -33,27 +35,23 @@ def prep_directories():
     except:
         print("Results directory already exists")
 
-def run_experiment(student_model_name, batch_size=32, data_dir="real_data", n_classes=4, num_epochs=20, T=.8, loss_ratio=.5, greyscale=True):
+def run_experiment(config):
+    config_dict = make_grid(config)[os.getenv("SLURM_ARRAY_TASK_ID")]
     prep_directories()
-    train_dataloader, val_dataloader = get_dataloader(data_dir, batch_size)
-    teacher_model = initialize_teacher_model(n_classes=n_classes)
-    student_model = model_dict[student_model_name]()
-    optimizer = Adam(params=student_model.parameters())
+    train_dataloader, val_dataloader = get_dataloader(config_dict.get("data_dir", "real_data"), config_dict.get("bs", 64))
+    teacher_model = initialize_teacher_model(n_classes=config_dict.get("n_classes", 4))
+    student_model = model_dict[config_dict.get("student_model_name")]()
+    optimizer = Adam(params=student_model.parameters(), lr=config_dict.get("lr", 0.001))
     loss_fn = nn.CrossEntropyLoss()
     param_num, size_all_mb = get_model_size(student_model)
-    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, num_epochs, T, loss_ratio, greyscale)
-    report_name = construct_report_name(student_model_name, T, loss_ratio)
-    res_dict = get_res_report(report_name, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb)
-    # save_model(config, best_model_params)
+    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("student_model_name"), config_dict.get("loss_ratio"), config_dict.get("greyscale"))
+    res_dict = get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb)
+    save_model(config_dict, best_model_params)
 
     return res_dict
 
 def save_model(config, best_model_params):
     torch.save(best_model_params, f"models/{config['filename']}.pt")
-
-def construct_report_name(student_model_name, T, loss_ratio):
-    report_name = f"{student_model_name}_{T}_{loss_ratio}"
-    return report_name
 
 def initialize_teacher_model(model_checkpoint="models/VGG16_FF_2023_05_11_2214281.pt", n_classes=4):
     model = models.vgg16()
@@ -98,7 +96,7 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
     best_model_params = None
     best_val_loss = None
     best_val_acc = None
-    early_stop_list = Queue(maxsize=5)
+    early_stopper = EarlyStopper(patience=5, min_delta=0.01)
     for epoch in range(1, num_epochs+1):
         train_t1 = time.time()
         student_model, train_loss, train_acc = train_epoch(teacher_model, student_model,
@@ -126,18 +124,12 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         val_losses.append(val_loss)
         val_accs.append(val_acc)
         # save best model
-        if best_val_acc is None or val_acc > best_val_acc:
-                    
+        if best_val_acc is None or val_acc > best_val_acc:   
             best_model_params = deepcopy(student_model.state_dict())
             best_val_loss = val_loss
             best_val_acc = val_acc
         # early stop
-        if early_stop_list.empty() or not early_stop_list.full():
-            early_stop_list.put(val_acc)
-        else:
-            early_stop_list.get()
-            early_stop_list.put(val_acc)
-        if max(list(early_stop_list.queue)) < best_val_acc and early_stop_list.full():
+        if early_stopper.early_stop(val_acc):
             break
         print(f"Best achieved val acc: {best_val_acc}")
     return best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times
