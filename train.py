@@ -241,4 +241,7 @@ def construct_result_filename(config_dict):
 
 
 if __name__ == "__main__":
-   run_experiment("mobilenet_small", num_epochs=2)
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    run_experiment(config)
+    
