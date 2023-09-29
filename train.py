@@ -1,7 +1,4 @@
-import numpy as np
 import torch
-import matplotlib.pyplot as plt
-from pathlib import Path
 from torch.utils.data import DataLoader, random_split
 from torch.optim import Adam
 import torch.nn as nn
@@ -9,19 +6,25 @@ from torch.utils.data import DataLoader
 from torchvision import transforms, datasets, models
 from model_zoo import model_dict
 from tqdm import tqdm
+import time
+import json
 
 
 import torch.nn.functional as F
 torch.manual_seed(1)
 
+
+
+
 def run_experiment(student_model_name, batch_size=32, data_dir="real_data", n_classes=4, num_epochs=20, T=.8, loss_ratio=.5):
+    res_dict = prep_result_report()
     train_dataloader, val_dataloader = get_dataloader(data_dir, batch_size)
     teacher_model = initialize_teacher_model(n_classes=n_classes)
     student_model = model_dict[student_model_name]()
     optimizer = Adam(params=student_model.parameters())
     loss_fn = nn.CrossEntropyLoss()
 
-    student_model, train_losses, train_accs, val_losses, val_accs = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, num_epochs=num_epochs, T=T, loss_ratio=loss_ratio)
+    student_model, train_losses, train_accs, val_losses, val_accs, train_times, val_times = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, num_epochs=num_epochs, T=T, loss_ratio=loss_ratio)
 
 
 
@@ -64,9 +67,10 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
     print(f"Device: {device}")
     teacher_model.to(device)
     student_model.to(device)
-    train_losses, train_accs, val_losses, val_accs = [], [], [], []
+    train_losses, train_accs, val_losses, val_accs, train_times, val_times = [], [], [], [], [], []
 
     for epoch in range(1, num_epochs+1):
+        train_t1 = time.time()
         student_model, train_loss, train_acc = train_epoch(teacher_model, student_model,
                                                    optimizer,
                                                    loss_fn,
@@ -75,7 +79,12 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
                                                    device,
                                                    T,
                                                    loss_ratio)
+        train_t2 = time.time()
+        train_times.append(train_t2 - train_t1)
+        val_t1 = time.time()
         val_loss, val_acc = validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio)
+        val_t2 = time.time()
+        val_times.append(val_t2 - val_t1)
         print(f"Epoch {epoch}/{num_epochs}: "
               f"Train loss: {train_loss:.3f}, "
               f"Train acc.: {train_acc:.3f}, "
@@ -85,7 +94,7 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         train_accs.append(train_acc)
         val_losses.append(val_loss)
         val_accs.append(val_acc)
-    return student_model, train_losses, train_accs, val_losses, val_accs
+    return student_model, train_losses, train_accs, val_losses, val_accs, train_times, val_times
 
 def temperature_softmax(logits, T):
     logits = logits / T
@@ -144,6 +153,34 @@ def validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_
             val_acc_cum += acc_batch_avg
     return val_loss_cum/len(val_loader), val_acc_cum/len(val_loader)
 
+def get_model_size(model):
+    param_mem = 0
+    param_num = 0
+    for param in model.parameters():
+        param_num += param.nelement()
+        param_mem += param.nelement() * param.element_size()
+    buffer_size = 0
+    for buffer in model.buffers():
+        buffer_size += buffer.nelement() * buffer.element_size()
+
+    size_all_mb = (param_mem + buffer_size) / 1024**2
+    return param_num, size_all_mb
+
+def get_res_report(output_file_name,train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, model_size):
+    res_report = {
+        "train_speed": train_times,
+        "inference_speed": val_times,
+        "student_memory": model_size,
+        "student_num_params": param_num,
+        "train_loss": train_losses,
+        "val_loss": val_losses,
+        "train_acc": train_accs,
+        "val_acc": val_accs,
+        "F1_score": [],
+    }
+    with open(f'{output_file_name}.json', 'w') as fp:
+        json.dump(res_report, fp)
+    return res_report
 
 
 if __name__ == "__main__":
