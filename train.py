@@ -36,15 +36,20 @@ def prep_directories():
 
 def run_experiment(config):
     try:
-        config_dict = make_grid(config)[os.getenv("SLURM_ARRAY_TASK_ID")]
+        task_id = os.getenv("SLURM_ARRAY_TASK_ID")
     except:
         print("not running sbatch array")
         config_dict = make_grid(config)[0]
+    try:
+        config_dict = make_grid(config)[task_id]
+    except:
+        print("not enough tasks available")
+        return
     prep_directories()
     train_dataloader, val_dataloader = get_dataloader(config_dict.get("data_dir", "real_data"), config_dict.get("bs", 64))
     teacher_model = initialize_teacher_model(n_classes=config_dict.get("n_classes", 4))
     student_model = model_dict[config_dict.get("student_model_name")](config_dict.get("pretrained", False))
-    optimizer = Adam(params=student_model.parameters(), lr=config_dict.get("lr", 0.001))
+    optimizer = Adam(params=student_model.parameters(), lr=config_dict.get("lr", 0.001), weight_decay=config_dict.get("weight_decay", 0))
     loss_fn = nn.CrossEntropyLoss()
     param_num, size_all_mb = get_model_size(student_model)
     best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("T"), config_dict.get("loss_ratio"), config_dict.get("greyscale"))
@@ -235,7 +240,7 @@ def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, 
     return res_report
 
 def construct_result_filename(config_dict):
-    filename = [config_dict["student_model_name"]]
+    filename = [config_dict["student_model_name"], max(config_dict["val_acc"])]
     for key, value in config_dict.items():
         if key != "student_model_name":
             filename.append(f"{key}-{value}")
