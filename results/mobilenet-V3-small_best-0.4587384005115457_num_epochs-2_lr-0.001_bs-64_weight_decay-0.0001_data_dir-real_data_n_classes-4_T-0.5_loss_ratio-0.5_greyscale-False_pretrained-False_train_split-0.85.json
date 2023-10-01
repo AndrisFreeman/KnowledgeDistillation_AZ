@@ -1,0 +1,42 @@
+{
+  "num_epochs": 2,
+  "lr": 0.001,
+  "bs": 64,
+  "weight_decay": 0.0001,
+  "student_model_name": "mobilenet-V3-small",
+  "data_dir": "real_data",
+  "n_classes": 4,
+  "T": 0.5,
+  "loss_ratio": 0.5,
+  "greyscale": false,
+  "pretrained": false,
+  "train_split": 0.85,
+  "filename": "mobilenet-V3-small_best-0.4587384005115457_num_epochs-2_lr-0.001_bs-64_weight_decay-0.0001_data_dir-real_data_n_classes-4_T-0.5_loss_ratio-0.5_greyscale-False_pretrained-False_train_split-0.85",
+  "train_speed": [
+    470.6253821849823,
+    441.0441436767578
+  ],
+  "inference_speed": [
+    63.88448357582092,
+    59.927781105041504
+  ],
+  "student_memory": 5.852264404296875,
+  "student_num_params": 1521956,
+  "train_loss": [
+    0.7255178599253945,
+    0.7286150957939129
+  ],
+  "val_loss": [
+    0.73644289578477,
+    0.7316329021976419
+  ],
+  "train_acc": [
+    0.37100478783609786,
+    0.3420031056311971
+  ],
+  "val_acc": [
+    0.37282506611249216,
+    0.4587384005115457
+  ],
+  "F1_score": []
+}
