@@ -1,7 +1,0 @@
-{
-    "model": "Model_3",
-    "train_time": 8.64,
-    "inference_time": 0.1901,
-    "relative_accuracy": 0.65,
-    "accuracy": 0.95
-}
