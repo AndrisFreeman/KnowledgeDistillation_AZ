@@ -1,13 +1,17 @@
 {
-    "num_epochs": [2],
+    "num_epochs": [20],
     "lr": [0.001],
-    "bs": [64],
-    "weight_decay":[0.0001],
-    "student_model_name":["mobilenet-V3"],
-    "data_dir": ["real_data"],
+    "bs": [32],
+    "weight_decay":[0],
+    "student_model_name":["mobilenet-V3-large", "mobilenet-V3-small"],
+    "train_dir": ["real_data"],
+    "val_dir": ["val_data"],
     "n_classes":[4],
-    "T":[0.8],
+    "T":[8],
     "loss_ratio":[0.5],
     "greyscale":[false],
-    "pretrained": [false]
+    "pretrained": [false],
+    "train_split": [0.80],
+    "teacher_model_name":["vgg16"],
+    "finetuned":[false]
 }

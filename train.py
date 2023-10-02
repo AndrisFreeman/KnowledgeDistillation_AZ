@@ -7,32 +7,14 @@ from torchvision import transforms, datasets, models
 from model_zoo import model_dict
 import time
 import json
-import itertools
+from statistics import median
 import os
 from copy import deepcopy
 import torch.nn.functional as F
 
-from util import EarlyStopper
+from util import *
 torch.manual_seed(1)
 
-
-def make_grid(hyperparam_dict):
-    """ Creates grid of all hyperparameter combinations
-    """
-    keys=hyperparam_dict.keys()
-    combinations=itertools.product(*hyperparam_dict.values())
-    grid=[dict(zip(keys,cc)) for cc in combinations]
-    return grid
-
-def prep_directories():
-    try: 
-        os.mkdir("models")
-    except:
-        print("Model directory already exists")
-    try: 
-        os.mkdir("results")
-    except:
-        print("Results directory already exists")
 
 def run_experiment(config):
     try:
@@ -46,20 +28,17 @@ def run_experiment(config):
         print("not enough tasks available")
         return
     prep_directories()
-    train_dataloader, val_dataloader = get_dataloader(config_dict.get("data_dir", "real_data"), config_dict.get("bs", 128), config_dict.get("train_split", 0.85))
+    train_dataloader, val_dataloader = get_dataloader(config_dict.get("train_dir", "real_data"), config_dict.get("val_dir", "val"), config_dict.get("bs", 128), config_dict.get("train_split", 0.85))
     teacher_model = initialize_teacher_model(n_classes=config_dict.get("n_classes", 4))
     student_model = model_dict[config_dict.get("student_model_name")](config_dict.get("pretrained", False))
     optimizer = Adam(params=student_model.parameters(), lr=config_dict.get("lr", 0.001), weight_decay=config_dict.get("weight_decay", 0))
     loss_fn = nn.CrossEntropyLoss()
     param_num, size_all_mb = get_model_size(student_model)
-    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("T"), config_dict.get("loss_ratio"), config_dict.get("greyscale"))
-    res_dict = get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb)
+    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_time = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("T"), config_dict.get("loss_ratio"), config_dict.get("greyscale"))
+    res_dict = get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb, batch_time)
     save_model(config_dict, best_model_params)
 
     return res_dict
-
-def save_model(config, best_model_params):
-    torch.save(best_model_params, f"models/{config['filename']}.pt")
 
 def initialize_teacher_model(model_checkpoint="models/VGG16_FF_2023_05_11_2214281.pt", n_classes=4):
     model = models.vgg16()
@@ -74,26 +53,6 @@ def initialize_teacher_model(model_checkpoint="models/VGG16_FF_2023_05_11_221428
         param.requires_grad = False
 
     return model
-
-def get_dataloader(data_dir, batch_size=128, train_split=0.85):
-    # Transformations
-    input_size = 112
-    transform = transforms.Compose([
-        transforms.Resize(input_size),
-        transforms.Grayscale(num_output_channels=1),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, ), (0.5, )) ])
-    # Dataset
-    data = datasets.ImageFolder(root=data_dir, transform=transform)
-    generator1 = torch.Generator().manual_seed(42)
-    full_length = len(data)
-    train_len = int(full_length * train_split)
-
-    train_data, val_data = random_split(data, [train_len, full_length - train_len], generator=generator1)
-    # Dataloader
-    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-    val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
-    return train_dataloader, val_dataloader
 
 def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, num_epochs, T, loss_ratio, greyscale):
     print("Starting training")
@@ -126,11 +85,11 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         val_loss, val_acc = validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale)
         val_t2 = time.time()
         val_times.append(val_t2 - val_t1)
-        print(f"Epoch {epoch}/{num_epochs}: "
-              f"Train loss: {train_loss:.3f}, "
-              f"Train acc.: {train_acc:.3f}, "
-              f"Val. loss: {val_loss:.3f}, "
-              f"Val. acc.: {val_acc:.3f}")
+        # print(f"Epoch {epoch}/{num_epochs}: "
+        #       f"Train loss: {train_loss:.3f}, "
+        #       f"Train acc.: {train_acc:.3f}, "
+        #       f"Val. loss: {val_loss:.3f}, "
+        #       f"Val. acc.: {val_acc:.3f}")
         train_losses.append(train_loss)
         train_accs.append(train_acc)
         val_losses.append(val_loss)
@@ -150,10 +109,7 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
     student_model.train()
     teacher_model.eval()
     train_loss_batches, train_acc_batches = [], []
-    times_preds = []
-    times_back = []
-    times_optimizer = []
-    times_track = []
+    times_batch = []
     for batch_index, (x, y) in enumerate(train_loader, 1):
         t1 = time.time()
         if not greyscale:
@@ -164,29 +120,20 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
         else:
             inputs, labels = x.to(device), y.to(device)
             student_pred = student_model.forward(inputs)
-            teacher_pred = teacher_model.forward(inputs)
-        t2 = time.time()
-        times_preds.append(t2-t1)
+            teacher_pred = teacher_model.forward(inputs) 
         loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn)
         loss.backward()
-        t3 = time.time()
-        times_back.append(t3-t2)
+
         optimizer.step()
-        t4 = time.time()
-        times_optimizer.append(t4-t3)
+        t2 = time.time()
+        times_batch.append(t2-t1)
         optimizer.zero_grad()
         train_loss_batches.append(loss.item())
 
         hard_preds = hard_student_pred.argmax(dim=1)
         acc_batch_avg = (hard_preds.to(device) == labels).float().mean().item()
         train_acc_batches.append(acc_batch_avg)
-        t5 = time.time()
-        times_track.append(t5-t4)
-    print(f"pred: {sorted(times_preds)[-10:]}")
-    print(f"back: {sorted(times_back)[-10:]}")
-    print(f"opti: {sorted(times_optimizer)[-10:]}")
-    print(f"track: {sorted(times_track)[-10:]}")
-    return student_model, sum(train_loss_batches)/len(train_loss_batches), sum(train_acc_batches)/len(train_acc_batches)
+    return student_model, sum(train_loss_batches)/len(train_loss_batches), sum(train_acc_batches)/len(train_acc_batches), median(times_batch)
 
 def validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale):
     val_loss_cum = 0
@@ -224,20 +171,7 @@ def compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio,
     hard_student_pred  = F.softmax(student_pred, dim=1)
     return loss, hard_student_pred
 
-def get_model_size(model):
-    param_mem = 0
-    param_num = 0
-    for param in model.parameters():
-        param_num += param.nelement()
-        param_mem += param.nelement() * param.element_size()
-    buffer_size = 0
-    for buffer in model.buffers():
-        buffer_size += buffer.nelement() * buffer.element_size()
-
-    size_all_mb = (param_mem + buffer_size) / 1024**2
-    return param_num, size_all_mb
-
-def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, model_size):
+def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, model_size, batch_time):
     res_report = {
         "train_speed": train_times,
         "inference_speed": val_times,
@@ -248,6 +182,7 @@ def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, 
         "train_acc": train_accs,
         "val_acc": val_accs,
         "F1_score": [],
+        "batch_time": batch_time
     }
     output_file_name = construct_result_filename(config_dict, res_report)
     config_dict["filename"] = output_file_name
@@ -260,13 +195,11 @@ def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, 
 
 def construct_result_filename(config_dict, res_report):
     filename = [config_dict["student_model_name"], f"best-{round(max(res_report['val_acc']), 6)}"]
-    ignore_list = ["student_model_name", "data_dir", "train_split", "pretrained", "greyscale", "n_classes", "num_epochs"]
+    ignore_list = ["student_model_name", "data_dir", "train_split", "pretrained", "greyscale", "n_classes", "num_epochs","teacher_model_name", "finetuned"]
     for key, value in config_dict.items():
         if key not in ignore_list:
             filename.append(f"{key};{value}")
     return "-".join(filename)
-
-
 
 if __name__ == "__main__":
     with open('config.json', 'r') as f:
