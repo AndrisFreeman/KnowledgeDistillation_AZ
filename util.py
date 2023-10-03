@@ -3,6 +3,7 @@ import os
 import itertools
 from torch.utils.data import DataLoader, Subset
 from torchvision import transforms, datasets
+import math
 
 class EarlyStopper:
     def __init__(self, patience=1, min_delta=0):
@@ -65,7 +66,7 @@ def get_dataloader(train_dir, val_dir, batch_size=128, train_split=0.85):
         transforms.Normalize((0.5, ), (0.5, )) ])
     # Dataset
     train_data = datasets.ImageFolder(root=train_dir, transform=transform)
-    # train_data = Subset(train_data, list(range(1000)))
+    # train_data = Subset(train_data, list(range(2000)))
     val_data = datasets.ImageFolder(root=val_dir, transform=transform)
 
     # generator1 = torch.Generator().manual_seed(42)
@@ -119,3 +120,82 @@ class GradientReversal(torch.nn.Module):
 
     def forward(self, x, lambda_):
         return GradientReversalFunction.apply(x, lambda_)
+
+# class CosineDecay(object):
+#     def __init__(self,
+#                 max_value,
+#                 min_value,
+#                 num_loops):
+#         self._max_value = max_value
+#         self._min_value = min_value
+#         self._num_loops = num_loops
+
+#     def get_value(self, i):
+#         if i < 0:
+#             i = 0
+#         if i >= self._num_loops:
+#             i = self._num_loops
+#         value = (math.cos(i * math.pi / self._num_loops) + 1.0) * 0.5
+#         value = value * (self._max_value - self._min_value) + self._min_value
+#         return value
+
+
+# class LinearDecay(object):
+#     def __init__(self,
+#                 max_value,
+#                 min_value,
+#                 num_loops):
+#         self._max_value = max_value
+#         self._min_value = min_value
+#         self._num_loops = num_loops
+
+#     def get_value(self, i):
+#         if i < 0:
+#             i = 0
+#         if i >= self._num_loops:
+#             i = self._num_loops - 1
+
+#         value = (self._max_value - self._min_value) / self._num_loops
+#         value = i * (-value)
+
+#         return value
+
+class CosineDecay(object):
+    def __init__(self,
+                max_value,
+                min_value,
+                num_loops):
+        self._max_value = max_value
+        self._min_value = min_value
+        self._num_loops = num_loops
+
+    def get_value(self, i):
+        if i < 0:
+            i = 0
+        if i >= self._num_loops:
+            i = self._num_loops
+        value = (math.cos(i * math.pi / self._num_loops) + 1.0) * 0.5
+        value = value * (self._max_value - self._min_value) + self._min_value
+
+        return 1-value
+
+
+class LinearDecay(object):
+    def __init__(self,
+                max_value,
+                min_value,
+                num_loops):
+        self._max_value = max_value
+        self._min_value = min_value
+        self._num_loops = num_loops
+
+    def get_value(self, i):
+        if i < 0:
+            i = 0
+        if i >= self._num_loops:
+            i = self._num_loops
+
+        value = (self._max_value - self._min_value) / self._num_loops
+        value = i * (value)
+
+        return value

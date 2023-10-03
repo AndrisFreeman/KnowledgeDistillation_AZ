@@ -1,6 +1,7 @@
 import torchvision.models as models
 import torch.nn as nn
 import torch
+from ghostnet import ghostnet
 
 def get_moblienet2(pretrained = True, n_classes=4, dropout = 0.2):
 

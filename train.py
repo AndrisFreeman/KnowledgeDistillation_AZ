@@ -1,9 +1,8 @@
 import torch
-from torch.utils.data import DataLoader, random_split
+
 from torch.optim import Adam
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from torchvision import transforms, datasets, models
+from torchvision import models
 from model_zoo import model_dict
 import time
 import json
@@ -11,6 +10,8 @@ from statistics import median
 import os
 from copy import deepcopy
 import torch.nn.functional as F
+from sklearn.metrics import f1_score as f1
+
 
 from util import *
 torch.manual_seed(1)
@@ -27,16 +28,44 @@ def run_experiment(config):
     except:
         print("not enough tasks available")
         return
+    if config_dict.get("curriculum", False) and config_dict.get("conditional", False):
+        print("cant combine conditional with curriculum")
+        return
     prep_directories()
     train_dataloader, val_dataloader = get_dataloader(config_dict.get("train_dir", "real_data"), config_dict.get("val_dir", "val"), config_dict.get("bs", 128), config_dict.get("train_split", 0.85))
     teacher_model = initialize_teacher_model(config_dict.get("teacher_model_name", "vgg16"), n_classes=config_dict.get("n_classes", 4))
     student_model = model_dict[config_dict.get("student_model_name")](config_dict.get("pretrained", False))
-    optimizer = Adam(params=student_model.parameters(), lr=config_dict.get("lr", 0.001), weight_decay=config_dict.get("weight_decay", 0))
+    trainable_list = nn.ModuleList([])
+    trainable_list.append(student_model)
+
+    if config_dict.get("curriculum", False):
+        mlp_net = Global_T()
+        trainable_list.append(mlp_net)
+        if config_dict.get("cosine_decay", False):
+            gradient_decay = CosineDecay(max_value=1, min_value=0, num_loops=10)
+        else:
+            gradient_decay = LinearDecay(max_value=1, min_value=0, num_loops=10)
+    else:
+        mlp_net = None
+        gradient_decay = None
+    optimizer = Adam(params=trainable_list.parameters(), lr=config_dict.get("lr", 0.001), weight_decay=config_dict.get("weight_decay", 0))
     class_weights = torch.tensor([31130/2752, 31130/11635, 31130/14573, 31130/2170])
     loss_fn = nn.CrossEntropyLoss()
     param_num, size_all_mb = get_model_size(student_model)
-    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_time = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("T"), config_dict.get("loss_ratio"), config_dict.get("greyscale"), config_dict.get("conditional", False))
-    res_dict = get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb, batch_time)
+    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_time, train_f1s, val_f1s = training_loop(teacher_model,
+                                                                                                                          student_model,
+                                                                                                                          optimizer,
+                                                                                                                          loss_fn,
+                                                                                                                          train_dataloader,
+                                                                                                                          val_dataloader,
+                                                                                                                          config_dict.get("num_epochs"),
+                                                                                                                          config_dict.get("T"),
+                                                                                                                          config_dict.get("loss_ratio"),
+                                                                                                                          config_dict.get("greyscale"),
+                                                                                                                          config_dict.get("conditional", False),
+                                                                                                                          gradient_decay,
+                                                                                                                          mlp_net)
+    res_dict = get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb, batch_time, train_f1s, val_f1s)
     save_model(config_dict, best_model_params)
 
     return res_dict
@@ -50,21 +79,21 @@ def initialize_teacher_model(model_checkpoint="vgg16", n_classes=4):
     model.classifier[6] = torch.nn.Linear(num_ftrs, n_classes)
     # Load pretrained weights
     if model_checkpoint== "vgg16":
-        model_checkpoint = "models/vgg16-best-0.99625-lr;0.001-bs;256-weight_decay;0-train_dir;real_data-val_dir;val-finetuned;False.pt"
+        model_checkpoint = "models/VGG16_FF_2023_05_11_2214281.pt"
     model.load_state_dict(torch.load(model_checkpoint))
     for param in model.parameters():
         param.requires_grad = False
 
     return model
 
-def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, num_epochs, T, loss_ratio, greyscale, conditional):
+def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, num_epochs, T, loss_ratio, greyscale, conditional, gradient_decay, mlp_net):
     print("Starting training")
     device = torch.device("cuda" if torch.cuda.is_available() 
                                   else "cpu")
     print(f"Device: {device}")
     teacher_model.to(device)
     student_model.to(device)
-    train_losses, train_accs, val_losses, val_accs, train_times, val_times = [], [], [], [], [], []
+    train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_times, train_f1s, val_f1s = [], [], [], [], [], [], [], [], []
     best_model_params = None
     best_val_loss = None
     best_val_acc = None
@@ -72,7 +101,9 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
     for epoch in range(1, num_epochs+1):
         train_t1 = time.time()
         print(f"Start epoch {epoch}: {time.ctime(train_t1)}")
-        student_model, train_loss, train_acc, batch_time = train_epoch(teacher_model, student_model,
+        if gradient_decay is not None:
+            decay_value = gradient_decay.get_value(epoch)
+        student_model, train_loss, train_acc, batch_time, train_f1 = train_epoch(teacher_model, student_model,
                                                    optimizer,
                                                    loss_fn,
                                                    train_loader,
@@ -81,12 +112,14 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
                                                    T,
                                                    loss_ratio,
                                                    greyscale,
-                                                    conditional)
+                                                   conditional,
+                                                   decay_value,
+                                                   mlp_net)
         train_t2 = time.time()
         print(f"End epoch {epoch}: {time.ctime(train_t2)}")
         train_times.append(train_t2 - train_t1)
         val_t1 = time.time()
-        val_loss, val_acc = validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale, conditional)
+        val_loss, val_acc, val_f1 = validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale, conditional)
         val_t2 = time.time()
         val_times.append(val_t2 - val_t1)
         # print(f"Epoch {epoch}/{num_epochs}: "
@@ -98,6 +131,9 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         train_accs.append(train_acc)
         val_losses.append(val_loss)
         val_accs.append(val_acc)
+        batch_times.append(batch_time)
+        train_f1s.append(train_f1)
+        val_f1s.append(val_f1)
         # save best model
         if best_val_acc is None or val_acc > best_val_acc:   
             best_model_params = deepcopy(student_model.state_dict())
@@ -107,13 +143,16 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         if early_stopper.early_stop(val_acc):
             break
     print(f"Best achieved val acc: {best_val_acc}")
-    return best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_time
+    return best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_times, train_f1s, val_f1s
 
-def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, device, T, loss_ratio, greyscale, conditional):
+def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, device, T, loss_ratio, greyscale, conditional, decay_value, mlp_net):
     student_model.train()
     teacher_model.eval()
-    train_loss_batches, train_acc_batches = [], []
+    if mlp_net is not None:
+        mlp_net.train()
+    train_loss_batches, train_acc_batches, f1_scores_batches = [], [], []
     times_batch = []
+    Ts = []
     for batch_index, (x, y) in enumerate(train_loader, 1):
         t1 = time.time()
         if not greyscale:
@@ -126,7 +165,17 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
             inputs, labels = x.to(device), y.to(device)
             student_pred = student_model.forward(inputs)
             with torch.no_grad():
-                teacher_pred = teacher_model.forward(inputs) 
+                teacher_pred = teacher_model.forward(inputs)
+        if mlp_net is not None:
+            # print(f"Decay:{decay_value}")
+            T = mlp_net(teacher_pred, student_pred, decay_value)  # (teacher_output, student_output)
+            # print(T)
+            T = 1 + 20 * torch.sigmoid(T)
+            # print(T)
+            T = T.cuda()
+            Ts.append(T.item())
+        else:
+            T = (T * torch.ones(1)).cuda()
         loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn, conditional)
         loss.backward()
 
@@ -137,13 +186,17 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
         train_loss_batches.append(loss.item())
 
         hard_preds = hard_student_pred.argmax(dim=1)
+        f1_score = f1(labels.cpu(), hard_preds.cpu(), average="micro")
         acc_batch_avg = (hard_preds.to(device) == labels).float().mean().item()
         train_acc_batches.append(acc_batch_avg)
-    return student_model, sum(train_loss_batches)/len(train_loss_batches), sum(train_acc_batches)/len(train_acc_batches), median(times_batch)
+        f1_scores_batches.append(f1_score)
+    print(set(Ts))
+    return student_model, sum(train_loss_batches)/len(train_loss_batches), sum(train_acc_batches)/len(train_acc_batches), median(times_batch), sum(f1_scores_batches)/len(f1_scores_batches)
 
 def validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale, conditional):
     val_loss_cum = 0
     val_acc_cum = 0
+    f1_score_cum = 0
     student_model.eval()
     with torch.no_grad():
         for batch_index, (x, y) in enumerate(val_loader, 1):
@@ -160,9 +213,11 @@ def validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_
             loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn, conditional)
             val_loss_cum += loss.item()
             hard_preds = hard_student_pred.argmax(dim=1)
+            f1_score = f1(labels.cpu(), hard_preds.cpu(), average="micro")
             acc_batch_avg = (hard_preds.to(device) == labels).float().mean().item()
             val_acc_cum += acc_batch_avg
-    return val_loss_cum/len(val_loader), val_acc_cum/len(val_loader)
+            f1_score_cum += f1_score
+    return val_loss_cum/len(val_loader), val_acc_cum/len(val_loader), f1_score_cum/len(val_loader)
 
 def compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn, conditional):
     soft_student_pred = student_pred / T
@@ -183,7 +238,7 @@ def compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio,
     hard_student_pred  = F.softmax(student_pred, dim=1)
     return loss, hard_student_pred
 
-def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, model_size, batch_time):
+def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, model_size, batch_time, train_f1s, val_f1s):
     res_report = {
         "train_speed": train_times,
         "inference_speed": val_times,
@@ -193,7 +248,8 @@ def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, 
         "val_loss": val_losses,
         "train_acc": train_accs,
         "val_acc": val_accs,
-        "F1_score": [],
+        "train_F1_score": train_f1s,
+        "val_F1_score": val_f1s,
         "batch_time": batch_time
     }
     output_file_name = construct_result_filename(config_dict, res_report)
