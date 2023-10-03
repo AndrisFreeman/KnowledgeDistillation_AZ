@@ -29,18 +29,19 @@ def run_experiment(config):
         return
     prep_directories()
     train_dataloader, val_dataloader = get_dataloader(config_dict.get("train_dir", "real_data"), config_dict.get("val_dir", "val"), config_dict.get("bs", 128), config_dict.get("train_split", 0.85))
-    teacher_model = initialize_teacher_model(n_classes=config_dict.get("n_classes", 4))
+    teacher_model = initialize_teacher_model(config_dict.get("teacher_model_name", "vgg16"), n_classes=config_dict.get("n_classes", 4))
     student_model = model_dict[config_dict.get("student_model_name")](config_dict.get("pretrained", False))
     optimizer = Adam(params=student_model.parameters(), lr=config_dict.get("lr", 0.001), weight_decay=config_dict.get("weight_decay", 0))
+    class_weights = torch.tensor([31130/2752, 31130/11635, 31130/14573, 31130/2170])
     loss_fn = nn.CrossEntropyLoss()
     param_num, size_all_mb = get_model_size(student_model)
-    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_time = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("T"), config_dict.get("loss_ratio"), config_dict.get("greyscale"))
+    best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_time = training_loop(teacher_model, student_model, optimizer, loss_fn, train_dataloader, val_dataloader, config_dict.get("num_epochs"), config_dict.get("T"), config_dict.get("loss_ratio"), config_dict.get("greyscale"), config_dict.get("conditional", False))
     res_dict = get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, train_times, val_times, param_num, size_all_mb, batch_time)
     save_model(config_dict, best_model_params)
 
     return res_dict
 
-def initialize_teacher_model(model_checkpoint="models/VGG16_FF_2023_05_11_2214281.pt", n_classes=4):
+def initialize_teacher_model(model_checkpoint="vgg16", n_classes=4):
     model = models.vgg16()
     # Change first layer input channels to 1
     model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
@@ -48,13 +49,15 @@ def initialize_teacher_model(model_checkpoint="models/VGG16_FF_2023_05_11_221428
     num_ftrs = model.classifier[-1].in_features
     model.classifier[6] = torch.nn.Linear(num_ftrs, n_classes)
     # Load pretrained weights
+    if model_checkpoint== "vgg16":
+        model_checkpoint = "models/vgg16-best-0.99625-lr;0.001-bs;256-weight_decay;0-train_dir;real_data-val_dir;val-finetuned;False.pt"
     model.load_state_dict(torch.load(model_checkpoint))
     for param in model.parameters():
         param.requires_grad = False
 
     return model
 
-def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, num_epochs, T, loss_ratio, greyscale):
+def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, num_epochs, T, loss_ratio, greyscale, conditional):
     print("Starting training")
     device = torch.device("cuda" if torch.cuda.is_available() 
                                   else "cpu")
@@ -69,7 +72,7 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
     for epoch in range(1, num_epochs+1):
         train_t1 = time.time()
         print(f"Start epoch {epoch}: {time.ctime(train_t1)}")
-        student_model, train_loss, train_acc = train_epoch(teacher_model, student_model,
+        student_model, train_loss, train_acc, batch_time = train_epoch(teacher_model, student_model,
                                                    optimizer,
                                                    loss_fn,
                                                    train_loader,
@@ -77,12 +80,13 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
                                                    device,
                                                    T,
                                                    loss_ratio,
-                                                   greyscale)
+                                                   greyscale,
+                                                    conditional)
         train_t2 = time.time()
         print(f"End epoch {epoch}: {time.ctime(train_t2)}")
         train_times.append(train_t2 - train_t1)
         val_t1 = time.time()
-        val_loss, val_acc = validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale)
+        val_loss, val_acc = validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale, conditional)
         val_t2 = time.time()
         val_times.append(val_t2 - val_t1)
         # print(f"Epoch {epoch}/{num_epochs}: "
@@ -103,9 +107,9 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         if early_stopper.early_stop(val_acc):
             break
     print(f"Best achieved val acc: {best_val_acc}")
-    return best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times
+    return best_model_params, train_losses, train_accs, val_losses, val_accs, train_times, val_times, batch_time
 
-def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, device, T, loss_ratio, greyscale):
+def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, val_loader, device, T, loss_ratio, greyscale, conditional):
     student_model.train()
     teacher_model.eval()
     train_loss_batches, train_acc_batches = [], []
@@ -116,12 +120,14 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
             student_x = torch.repeat_interleave(x, 3, 1)
             teacher_inputs, student_inputs, labels = x.to(device), student_x.to(device), y.to(device)
             student_pred = student_model.forward(student_inputs)
-            teacher_pred = teacher_model.forward(teacher_inputs)
+            with torch.no_grad():
+                teacher_pred = teacher_model.forward(teacher_inputs)
         else:
             inputs, labels = x.to(device), y.to(device)
             student_pred = student_model.forward(inputs)
-            teacher_pred = teacher_model.forward(inputs) 
-        loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn)
+            with torch.no_grad():
+                teacher_pred = teacher_model.forward(inputs) 
+        loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn, conditional)
         loss.backward()
 
         optimizer.step()
@@ -135,7 +141,7 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
         train_acc_batches.append(acc_batch_avg)
     return student_model, sum(train_loss_batches)/len(train_loss_batches), sum(train_acc_batches)/len(train_acc_batches), median(times_batch)
 
-def validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale):
+def validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_ratio, greyscale, conditional):
     val_loss_cum = 0
     val_acc_cum = 0
     student_model.eval()
@@ -151,23 +157,29 @@ def validate(teacher_model, student_model, loss_fn, val_loader, device, T, loss_
                 student_pred = student_model.forward(inputs)
                 teacher_pred = teacher_model.forward(inputs)
 
-            loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn)
+            loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn, conditional)
             val_loss_cum += loss.item()
             hard_preds = hard_student_pred.argmax(dim=1)
             acc_batch_avg = (hard_preds.to(device) == labels).float().mean().item()
             val_acc_cum += acc_batch_avg
     return val_loss_cum/len(val_loader), val_acc_cum/len(val_loader)
 
-def compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn):
+def compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_ratio, loss_fn, conditional):
     soft_student_pred = student_pred / T
     soft_teacher_pred = teacher_pred / T
     # print(soft_student_pred.size())
     # print(soft_teacher_pred.size())
     soft_student_prob = F.log_softmax(soft_student_pred, dim=1)
-    soft_teacher_prob = F.log_softmax(soft_teacher_pred, dim=1)
-    distillation_loss = F.kl_div(soft_student_prob, soft_teacher_prob, reduction="batchmean", log_target=True) * T * T
-    student_loss = loss_fn(student_pred, labels)
-    loss = loss_ratio * distillation_loss + (1 - loss_ratio) * student_loss
+    soft_teacher_prob = F.softmax(soft_teacher_pred, dim=1)
+    if conditional:
+        for i,item in enumerate(teacher_pred):  
+            if item.argmax(dim=0) != labels[i]:
+                soft_teacher_prob[i] = torch.nn.functional.one_hot(labels[i], num_classes=4)
+        loss = F.kl_div(soft_student_prob, soft_teacher_prob, log_target=False, reduction="batchmean")
+    else:
+        distillation_loss = F.kl_div(soft_student_prob, soft_teacher_prob, reduction="batchmean") * T * T
+        student_loss = loss_fn(student_pred, labels)
+        loss = loss_ratio * distillation_loss + (1 - loss_ratio) * student_loss
     hard_student_pred  = F.softmax(student_pred, dim=1)
     return loss, hard_student_pred
 
@@ -194,7 +206,7 @@ def get_res_report(config_dict, train_losses, train_accs, val_losses, val_accs, 
     return res_report
 
 def construct_result_filename(config_dict, res_report):
-    filename = [config_dict["student_model_name"], f"best-{round(max(res_report['val_acc']), 6)}"]
+    filename = [config_dict["student_model_name"], f"best;{round(max(res_report['val_acc']), 6)}"]
     ignore_list = ["student_model_name", "data_dir", "train_split", "pretrained", "greyscale", "n_classes", "num_epochs","teacher_model_name", "finetuned"]
     for key, value in config_dict.items():
         if key not in ignore_list:

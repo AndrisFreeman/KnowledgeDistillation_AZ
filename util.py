@@ -1,8 +1,8 @@
 import torch
 import os
 import itertools
-from torchvision import transforms
-from torch.utils.data import DataLoader, random_split, datasets
+from torch.utils.data import DataLoader, Subset
+from torchvision import transforms, datasets
 
 class EarlyStopper:
     def __init__(self, patience=1, min_delta=0):
@@ -65,7 +65,9 @@ def get_dataloader(train_dir, val_dir, batch_size=128, train_split=0.85):
         transforms.Normalize((0.5, ), (0.5, )) ])
     # Dataset
     train_data = datasets.ImageFolder(root=train_dir, transform=transform)
+    # train_data = Subset(train_data, list(range(1000)))
     val_data = datasets.ImageFolder(root=val_dir, transform=transform)
+
     # generator1 = torch.Generator().manual_seed(42)
     # full_length = len(data)
     # train_len = int(full_length * train_split)
@@ -75,3 +77,45 @@ def get_dataloader(train_dir, val_dir, batch_size=128, train_split=0.85):
     train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
     return train_dataloader, val_dataloader
+
+class Global_T(torch.nn.Module):
+    def __init__(self):
+        super(Global_T, self).__init__()
+        
+        self.global_T = torch.nn.Parameter(torch.ones(1), requires_grad=True)
+        self.grl = GradientReversal()
+
+    def forward(self, fake_input1, fake_input2, lambda_):
+        return self.grl(self.global_T, lambda_)
+
+
+from torch.autograd import Function
+class GradientReversalFunction(Function):
+    """
+    Gradient Reversal Layer from:
+    Unsupervised Domain Adaptation by Backpropagation (Ganin & Lempitsky, 2015)
+    Forward pass is the identity function. In the backward pass,
+    the upstream gradients are multiplied by -lambda (i.e. gradient is reversed)
+    """
+
+    @staticmethod
+    def forward(ctx, x, lambda_):
+        ctx.lambda_ = lambda_
+        return x.clone()
+
+    @staticmethod
+    def backward(ctx, grads):
+        lambda_ = ctx.lambda_
+        lambda_ = grads.new_tensor(lambda_)
+        dx = lambda_ * grads
+        # print(dx)
+        return dx, None
+
+
+class GradientReversal(torch.nn.Module):
+    def __init__(self):
+        super(GradientReversal, self).__init__()
+        # self.lambda_ = lambda_
+
+    def forward(self, x, lambda_):
+        return GradientReversalFunction.apply(x, lambda_)
