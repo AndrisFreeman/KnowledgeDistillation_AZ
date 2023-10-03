@@ -56,7 +56,7 @@ def get_model_size(model):
     size_all_mb = (param_mem + buffer_size) / 1024**2
     return param_num, size_all_mb
 
-def get_dataloader(train_dir, val_dir, batch_size=128, train_split=0.85):
+def get_dataloader(config_dict):
     # Transformations
     input_size = 112
     transform = transforms.Compose([
@@ -65,9 +65,9 @@ def get_dataloader(train_dir, val_dir, batch_size=128, train_split=0.85):
         transforms.ToTensor(),
         transforms.Normalize((0.5, ), (0.5, )) ])
     # Dataset
-    train_data = datasets.ImageFolder(root=train_dir, transform=transform)
+    train_data = datasets.ImageFolder(root=config_dict.get("train_dir", "real_data"), transform=transform)
     # train_data = Subset(train_data, list(range(2000)))
-    val_data = datasets.ImageFolder(root=val_dir, transform=transform)
+    val_data = datasets.ImageFolder(root=config_dict.get("val_dir", "val"), transform=transform)
 
     # generator1 = torch.Generator().manual_seed(42)
     # full_length = len(data)
@@ -75,8 +75,8 @@ def get_dataloader(train_dir, val_dir, batch_size=128, train_split=0.85):
 
     # train_data, val_data = random_split(data, [train_len, full_length - train_len], generator=generator1)
     # Dataloader
-    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-    val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
+    train_dataloader = DataLoader(train_data, batch_size=config_dict.get("bs", 128), shuffle=True)
+    val_dataloader = DataLoader(val_data, batch_size=config_dict.get("bs", 128), shuffle=False)
     return train_dataloader, val_dataloader
 
 class Global_T(torch.nn.Module):
