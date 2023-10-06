@@ -33,7 +33,7 @@ def run_experiment(config):
         return
     prep_directories()
     train_dataloader, val_dataloader = get_dataloader(config_dict)
-    teacher_model = initialize_teacher_model(config_dict)
+    teacher_model = model_dict[config_dict.get("teacher_model_name")](config_dict.get("pretrained", False))
     student_model = model_dict[config_dict.get("student_model_name")](config_dict.get("pretrained", False))
     trainable_list = nn.ModuleList([])
     trainable_list.append(student_model)

@@ -1,0 +1,65 @@
+{
+  "num_epochs": 5,
+  "lr": 0.001,
+  "bs": 32,
+  "weight_decay": 0,
+  "student_model_name": "mobilenet-V3-large",
+  "train_dir": "real_data",
+  "val_dir": "val",
+  "n_classes": 4,
+  "T": 8,
+  "loss_ratio": 0.5,
+  "greyscale": false,
+  "pretrained": false,
+  "train_split": 0.8,
+  "teacher_model_name": "vgg16",
+  "finetuned": false,
+  "conditional": true,
+  "filename": "mobilenet-V3-large-best;0.462859-lr;0.001-bs;32-weight_decay;0-train_dir;real_data-val_dir;val-T;8-loss_ratio;0.5-conditional;True",
+  "train_speed": [
+    21.18649649620056,
+    18.945422410964966,
+    27.965322971343994,
+    27.585014581680298,
+    24.431341409683228
+  ],
+  "inference_speed": [
+    40.28833818435669,
+    81.31106972694397,
+    66.07629609107971,
+    57.978153705596924,
+    57.81721615791321
+  ],
+  "student_memory": 16.1424560546875,
+  "student_num_params": 4207156,
+  "train_loss": [
+    -40.024864646140486,
+    -400.75396966934204,
+    -1438.9091567993164,
+    -3473.1040687561035,
+    -7099.764434814453
+  ],
+  "val_loss": [
+    -1.041498403568737,
+    0.4522987745824407,
+    2.8845245427772648,
+    5.232130437600808,
+    7.208111692647465
+  ],
+  "train_acc": [
+    0.609375,
+    0.9921875,
+    0.9990234375,
+    1.0,
+    1.0
+  ],
+  "val_acc": [
+    0.46285860655737704,
+    0.08837090163934426,
+    0.08837090163934426,
+    0.08837090163934426,
+    0.08837090163934426
+  ],
+  "F1_score": [],
+  "batch_time": 0.740370512008667
+}

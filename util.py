@@ -4,6 +4,10 @@ import itertools
 from torch.utils.data import DataLoader, Subset
 from torchvision import transforms, datasets
 import math
+try:
+    from bird_data import BirdData
+except:
+    print("no birds")
 
 class EarlyStopper:
     def __init__(self, patience=1, min_delta=0):
@@ -68,6 +72,24 @@ def get_dataloader(config_dict):
     train_data = datasets.ImageFolder(root=config_dict.get("train_dir", "real_data"), transform=transform)
     # train_data = Subset(train_data, list(range(2000)))
     val_data = datasets.ImageFolder(root=config_dict.get("val_dir", "val"), transform=transform)
+
+    # generator1 = torch.Generator().manual_seed(42)
+    # full_length = len(data)
+    # train_len = int(full_length * train_split)
+
+    # train_data, val_data = random_split(data, [train_len, full_length - train_len], generator=generator1)
+    # Dataloader
+    train_dataloader = DataLoader(train_data, batch_size=config_dict.get("bs", 128), shuffle=True)
+    val_dataloader = DataLoader(val_data, batch_size=config_dict.get("bs", 128), shuffle=False)
+    return train_dataloader, val_dataloader
+
+def get_bird_dataloader(config_dict):
+    # Transformations
+
+    # Dataset
+    train_data = BirdData(root=config_dict.get("train_dir", "bird_train.zip"))
+    # train_data = Subset(train_data, list(range(2000)))
+    val_data = BirdData(root=config_dict.get("val_dir", "bird_valid.zip"))
 
     # generator1 = torch.Generator().manual_seed(42)
     # full_length = len(data)

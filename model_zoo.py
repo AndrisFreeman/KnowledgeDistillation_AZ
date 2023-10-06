@@ -114,6 +114,34 @@ def get_efficientnet_b4(pretrained = True, n_classes=4, dropout = 0.4):
                         nn.Linear(in_features=1792, out_features=n_classes, bias=True))
     return model
 
+def get_resnet_101(pretrained = True, n_classes=525, dropout = 0.4):
+    if pretrained:
+        model = models.resnet101(weights = 'IMAGENET1K_V1')
+        for param in model.parameters():
+            param.requires_grad = False
+        model.fc = nn.Linear(model.fc.in_features, n_classes)
+
+    else:
+        model = models.resnet101()
+        model.fc = nn.Linear(model.fc.in_features, n_classes)
+
+    return model
+
+def get_teacher_vgg_astra(model_checkpoint="models/VGG16_FF_2023_05_11_2214281.pt", n_classes=4):
+    model = models.vgg16()
+    # Change first layer input channels to 1
+    model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    # Update final layer to proper number of outputs
+    num_ftrs = model.classifier[-1].in_features
+    model.classifier[6] = torch.nn.Linear(num_ftrs, n_classes)
+    # Load pretrained weights
+    model.load_state_dict(torch.load(model_checkpoint))
+    # for param in model.parameters():
+    #     param.requires_grad = False
+    model.features.requires_grad_(False)
+    model.classifier.requires_grad_(True)
+    return model
+
 model_dict = {
     "mobilenet-V2": get_moblienet2,
     "mobilenet-V3-small": get_moblienet3_small,
@@ -124,7 +152,9 @@ model_dict = {
     'ghostnet': get_ghostnet,
     'shufflenet': get_shufflenet,
     'efficientnet-b3': get_efficientnet_b3,
-    'efficientnet-b4': get_efficientnet_b4
+    'efficientnet-b4': get_efficientnet_b4,
+    'vgg_astra': get_teacher_vgg_astra,
+    'resnet101': get_resnet_101
 }
 
 if __name__ == "__main__":
@@ -138,4 +168,6 @@ if __name__ == "__main__":
     model_8 = get_shufflenet()
     model_9 = get_efficientnet_b3()
     model_10 = get_efficientnet_b4()
+    model_11 = get_teacher_vgg_astra()
+    model_12 = get_resnet_101()
 
