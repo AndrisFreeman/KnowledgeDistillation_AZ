@@ -127,7 +127,7 @@ def get_resnet_101(pretrained = True, n_classes=525, dropout = 0.4):
 
     return model
 
-def get_teacher_vgg_astra(model_checkpoint="models/VGG16_FF_2023_05_11_2214281.pt", n_classes=4):
+def get_teacher_vgg_astra(pretrained= True, model_checkpoint="models/VGG16_FF_2023_05_11_2214281.pt", n_classes=4):
     model = models.vgg16()
     # Change first layer input channels to 1
     model.features[0] = torch.nn.Conv2d(1, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
