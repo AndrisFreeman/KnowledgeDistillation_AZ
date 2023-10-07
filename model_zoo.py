@@ -127,6 +127,32 @@ def get_resnet_101(pretrained = True, n_classes=525, dropout = 0.4):
 
     return model
 
+def get_resnet_50(pretrained = True, n_classes=525, dropout = 0.4):
+    if pretrained:
+        model = models.resnet50(weights = 'IMAGENET1K_V1')
+        for param in model.parameters():
+            param.requires_grad = False
+        model.fc = nn.Linear(model.fc.in_features, n_classes)
+
+    else:
+        model = models.resnet50()
+        model.fc = nn.Linear(model.fc.in_features, n_classes)
+
+    return model
+
+def get_resnext_101(pretrained = True, n_classes=525, dropout = 0.4):
+    if pretrained:
+        model = models.resnext101_32x8d(weights = 'IMAGENET1K_V1')
+        for param in model.parameters():
+            param.requires_grad = False
+        model.fc = nn.Linear(model.fc.in_features, n_classes)
+
+    else:
+        model = models.resnext101_32x8d()
+        model.fc = nn.Linear(model.fc.in_features, n_classes)
+
+    return model
+
 def get_teacher_vgg_astra(pretrained= True, model_checkpoint="models/VGG16_FF_2023_05_11_2214281.pt", n_classes=4):
     model = models.vgg16()
     # Change first layer input channels to 1
@@ -154,7 +180,9 @@ model_dict = {
     'efficientnet-b3': get_efficientnet_b3,
     'efficientnet-b4': get_efficientnet_b4,
     'vgg_astra': get_teacher_vgg_astra,
-    'resnet101': get_resnet_101
+    'resnet101': get_resnet_101,
+    'resnet50': get_resnet_50,
+    'resnext101': get_resnext_101
 }
 
 if __name__ == "__main__":

@@ -33,8 +33,8 @@ def run_experiment(config):
         return
     prep_directories()
     train_dataloader, val_dataloader = get_dataloader(config_dict)
-    teacher_model = model_dict[config_dict.get("teacher_model_name")](config_dict.get("pretrained", False))
-    student_model = model_dict[config_dict.get("student_model_name")](config_dict.get("pretrained", False))
+    teacher_model = model_dict[config_dict.get("teacher_model_name")](pretrained=config_dict.get("pretrained", False), n_classes=config_dict.get("n_classes", 4))
+    student_model = model_dict[config_dict.get("student_model_name")](pretrained=config_dict.get("pretrained", False), n_classes=config_dict.get("n_classes", 4))
     trainable_list = nn.ModuleList([])
     trainable_list.append(student_model)
 
@@ -101,7 +101,7 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
             decay_value = gradient_decay.get_value(epoch)
         else:
             decay_value = None
-        student_model, train_loss, train_acc, batch_time, train_f1 = train_epoch(teacher_model, student_model,
+        student_model, train_loss, train_acc, batch_time, hard_preds, labels = train_epoch(teacher_model, student_model,
                                                    optimizer,
                                                    loss_fn,
                                                    train_loader,
@@ -113,7 +113,7 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         print(f"End epoch {epoch}: {time.ctime(train_t2)}")
         train_times.append(train_t2 - train_t1)
         val_t1 = time.time()
-        val_loss, val_acc, val_f1 = validate(teacher_model, student_model, loss_fn, val_loader, device, config_dict)
+        val_loss, val_acc, val_preds, val_labels = validate(teacher_model, student_model, loss_fn, val_loader, device, config_dict)
         val_t2 = time.time()
         val_times.append(val_t2 - val_t1)
         train_losses.append(train_loss)
@@ -121,8 +121,11 @@ def training_loop(teacher_model, student_model, optimizer, loss_fn, train_loader
         val_losses.append(val_loss)
         val_accs.append(val_acc)
         batch_times.append(batch_time)
-        train_f1s.append(train_f1)
-        val_f1s.append(val_f1)
+        for x in [labels, hard_preds, val_labels, val_preds]:
+            if torch.is_tensor(x):
+                x.cpu()
+        train_f1s.append(f1(labels, hard_preds, average="micro"))
+        val_f1s.append(f1(val_labels, val_preds, average="micro"))
         # save best model
         if best_val_acc is None or val_acc > best_val_acc:   
             best_model_params = deepcopy(student_model.state_dict())
@@ -139,7 +142,7 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
     teacher_model.eval()
     if mlp_net is not None:
         mlp_net.train()
-    train_loss_batches, train_acc_batches, f1_scores_batches = [], [], []
+    train_loss_batches, train_acc_batches, epoch_hard_preds, epoch_labels = [], [], [], []
     times_batch = []
     Ts = []
     for batch_index, (x, y) in enumerate(train_loader, 1):
@@ -175,16 +178,15 @@ def train_epoch(teacher_model, student_model, optimizer, loss_fn, train_loader, 
         train_loss_batches.append(loss.item())
 
         hard_preds = hard_student_pred.argmax(dim=1)
-        f1_score = f1(labels.cpu(), hard_preds.cpu(), average="micro")
+        epoch_hard_preds.extend(hard_preds.cpu())
+        epoch_labels.extend(labels.cpu())
         acc_batch_avg = (hard_preds.to(device) == labels).float().mean().item()
         train_acc_batches.append(acc_batch_avg)
-        f1_scores_batches.append(f1_score)
-    return student_model, sum(train_loss_batches)/len(train_loss_batches), sum(train_acc_batches)/len(train_acc_batches), median(times_batch), sum(f1_scores_batches)/len(f1_scores_batches)
+
+    return student_model, sum(train_loss_batches)/len(train_loss_batches), sum(train_acc_batches)/len(train_acc_batches), median(times_batch), epoch_hard_preds, epoch_labels
 
 def validate(teacher_model, student_model, loss_fn, val_loader, device, config_dict):
-    val_loss_cum = 0
-    val_acc_cum = 0
-    f1_score_cum = 0
+    val_loss, val_acc, epoch_hard_preds, epoch_labels = [], [], [], []
     student_model.eval()
     with torch.no_grad():
         for batch_index, (x, y) in enumerate(val_loader, 1):
@@ -199,13 +201,13 @@ def validate(teacher_model, student_model, loss_fn, val_loader, device, config_d
                 teacher_pred = teacher_model.forward(inputs)
 
             loss, hard_student_pred = compute_distillation_loss(teacher_pred, student_pred, labels, config_dict.get("T"), loss_fn, config_dict)
-            val_loss_cum += loss.item()
+            val_loss.append(loss.item())
             hard_preds = hard_student_pred.argmax(dim=1)
-            f1_score = f1(labels.cpu(), hard_preds.cpu(), average="micro")
             acc_batch_avg = (hard_preds.to(device) == labels).float().mean().item()
-            val_acc_cum += acc_batch_avg
-            f1_score_cum += f1_score
-    return val_loss_cum/len(val_loader), val_acc_cum/len(val_loader), f1_score_cum/len(val_loader)
+            val_acc.append(acc_batch_avg)
+            epoch_hard_preds.extend(hard_preds.cpu())
+            epoch_labels.extend(labels.cpu())
+    return sum(val_loss)/len(val_loss), sum(val_acc)/len(val_acc), epoch_hard_preds, epoch_labels
 
 def compute_distillation_loss(teacher_pred, student_pred, labels, T, loss_fn, config_dict):
     soft_student_pred = student_pred / T
@@ -253,7 +255,7 @@ def construct_result_filename(config_dict, res_report):
     filename = [config_dict["student_model_name"], f"best;{round(max(res_report['val_acc']), 6)}"]
     ignore_list = ["student_model_name", "train_dir", "val_dir", "train_split", "pretrained", "greyscale", "n_classes", "num_epochs","teacher_model_name", "finetuned"]
     for key, value in config_dict.items():
-        if key not in ignore_list:
+        if key not in ignore_list and key not in res_report.keys():
             filename.append(f"{key};{value}")
     return "-".join(filename)
 
