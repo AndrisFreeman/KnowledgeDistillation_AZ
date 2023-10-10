@@ -95,10 +95,65 @@ In recent years deep neural networks (DNNs) have become the state-of-the-art in 
 With the widespread use of mobile and edge devices in every day life and commercial contexts it is natural to leverage the abilities of DNNs on these devices for a multitude of use cases such as language translation or image classification. With some applications having strict latency, privacy or connectivity requirements, preventing the usage of cloud-based services, it becomes infeasible to use such large models because of memory, computational and energy consumption limitations. This makes it critical to develop methods that are aimed at reducing size and/or inference time of models while keeping a similar performance.
 
 This work gives an overview over the three most used compression techniques for DNNs: pruning, quantization and knowledge distillation. Due to the limited scope and length of this work, the presented approaches only represent a small fraction of the published literature and should mainly serve as an introduction to the field, stressing the main concepts for different distillation techniques.
+\newpage
+\section{Methods/Prerequisites}
+Given the described initial conditions for our project, we decided to focus on offline response-based knowledge distillation techniques and investigate the trade-off between performance and model size/speed. This can be explained by the availability of an already trained and well performing teacher network and the transferability of response-based implementations between different network structures.
 
+Following the conducted literature review we identified three response-based knowledge distillation techniques suitable for the required task.
+Following \cite{hintonDistillingKnowledgeNeural2015} the knowledge of a network can be distilled by matching the \textit{logits} and in the case of (multi-class) classification the softmax distribution of the teacher and student networks. The distillation loss $ L_D $ can then be expressed as in equation \ref{eq:dist_loss}, where $ L(.) $ is a loss function and $ p(.) $ the softmax function and $ z_t, z_s $ the logits for teacher and student respectively \cite{gouKnowledgeDistillationSurvey2021}.
+\begin{equation}
+\label{eq:dist_loss}
+L_D = L(p(z_t), p(z_s))
+\end{equation}
+Hinton et al. argue that richer information about similarities between samples and thus more knowledge is transferred between teacher and student, when soft targets are used. They adapt the softmax function by using a scaling parameter $ T $, the temperature, to increase the entropy of the resulting probability distribution. Equation \ref{eq:softmax_T} shows this adapted softmax function with $ z_i $ as the logit for class $ i $ and $ T $ as the temperature \cite{hintonDistillingKnowledgeNeural2015}.
+
+\begin{equation}
+\label{eq:softmax_T}
+p(z_i, T) = \frac{exp(z_i / T)}{\sum_{j}exp(z_j/ T)}
+\end{equation}
+Combining equations \ref{eq:dist_loss} and \ref{eq:softmax_T} leads to equation \ref{eq:dist_loss_final}, the distillation loss with soft targets where $ L_{KL} $ is the Kullback Leibler divergence loss.
+\begin{equation}
+\label{eq:dist_loss_final}
+L_D(p(z_t, T), p(z_s, T)) = L_{KL}(p(z_t, T), p(z_s, T))
+\end{equation}
+To make use of the information in the training data, the student is trained with, the distillation loss is usually combined with the student loss $ L_S $, which is the cross-entropy loss between student outputs and the ground truth labels $ L_S = L_CE(y, p(z_s, T=1)) $. In combining these two losses, we arrive at the joint loss given in equation \ref{eq:joint_loss}, where $ \alpha $ is a balancing parameter between the two losses and the multiplication with $ T^2 $ is done to normalize the magnitude of the gradients \cite{hintonDistillingKnowledgeNeural2015}. Training with this loss function as an objective is further referred to as vanilla knowledge distillation.
+\begin{equation}
+\label{eq:joint_loss}
+L_J = \alpha  (L_D * T^2) + (1 - \alpha) L_S
+\end{equation}
+
+
+Meng et al. observe that it can improve results to only use the distillation loss when the teacher network makes a correct prediction and name this approach conditional teacher student learning \cite{meng2019conditional}. This simplifies the joint loss $ L_J $ by only using the distillation loss with soft labels replaced by the one-hot encoded hard labels for samples where the teacher network makes an incorrect prediction. Thereby, the heuristic tuning of hyperparameter $ \alpha $ can be avoided.
+
+Both introduced methods so far make use of a static heuristically chosen hyperparameter $ T $ for the knowledge distillation. Zheng et al. argue that a dynamic temperature $ T $, would benefit the distillation process inspired by curriculum learning, where the learning difficulty is increased through the training process \cite{liCurriculumTemperatureKnowledge2022}. The dynamic temperature is modeled as a temperature module that gets learned in an adversarial manner. The temperature module is optimized in the opposite direction of the student, trying to maximize the distillation loss with the update shown in equation \ref{eq:temp_gradient} \cite{liCurriculumTemperatureKnowledge2022}.
+
+\begin{equation}
+\label{eq:temp_gradient}
+\theta_{temp} = \theta_{temp} + \mu \frac{\partial L}{\partial \theta_{temp}}
+\end{equation}
+To adopt the curriculum learning and change the difficulty of the task throughout the training, the loss w.r.t. the temperature is scaled by $ \lambda $, leading to equation \ref{eq:scaled_temp_gradient} \cite{liCurriculumTemperatureKnowledge2022}.
+\begin{equation}
+\label{eq:scaled_temp_gradient}
+\theta_{temp} = \theta_{temp} + \mu \frac{\partial(\lambda L)}{\partial \theta_{temp}}
+\end{equation}
+$ \lambda $ increases with each epoch $ E_n $ during the training according to either a linear schedule or a cosine schedule given in equation \ref{eq:cos_schedule}, where $  \lambda_{min} $ and $  \lambda_{max} $ are the range for $ \lambda $ and $ E_{cap} $ is the epoch at which $ \lambda $ reaches it maximum and stays constant. The linear schedule also adopts the same methodology with $ E_{cap} $.
+\begin{equation}
+\label{eq:cos_schedule}
+\lambda_{n} = \lambda_{min} + \frac{1}{2}(\lambda_{max}-\lambda_{min})(1 + cos((1+\frac{min(E_n, E_{cap})}{E_{cap}})\pi))
+\end{equation}
+Adopting their implementation of a global temperature, $ T $ is a single learnable parameter used for each sample in a batch before being updated with its gradient \cite{liCurriculumTemperatureKnowledge2022}. Following Zheng et al. we set $  \lambda_{min} $ and $  \lambda_{max} $ at $ 0 $ and $ 1 $ as well as $ E_{cap} $ at $ 10 $ as our default values.
+
+\section{Experimental setup}
+In accordance with the project goals an ablation study with $ 4 $ different student architectures and the $ 3 $ described distillation techniques is conducted. As for student architectures we focused on efficient convolutional architectures especially designed for mobile and edge devices. The four considered architectures are \textit{Mobilenet-V3-small}, \textit{Mobilenet-V3-large} \cite{mobilenetv3}, Shufflenet \cite{shufflenet} and Ghostnet \cite{han2020ghostnet}. All network implementations are taken from PyTorch \cite{pytorch}. To confirm with the expected input sizes of these architectures, the greyscale image data is duplicated along the channel axis. Additionally, images are resized to $ 112 $\textit{px} sized square images and normalized. Throughout all experiments a batch size of $ 256 $ is used and models are trained for $ 20 $ epochs with early stopping. For all $ 4 $ student architectures experiments are performed with the $ 3 $ different knowledge distillation techniques and training from scratch without any distillation. For vanilla knowledge distillation different values for the temperature are investigated. Conditional knowledge distillation is conducted with a temperature of $ 4 $. For the curriculum-based knowledge distillation linear and cosine decay are investigated.
+As performance metrics we report validation accuracy and validation $ F1 $-score. For size and speed metrics, the inference and train speed are reported as well as the model size in \textit{Megabytes} and as the number  of trainable parameters.
+All experiments are conducted with a single \textit{Nvidia A40} GPU. 
+\section{Limitations}
+Due to the limited available time for the project and project specific circumstances multiple limitations have to be considered regarding the achieved results. Because of significant training times and the time constraints set by the project course the search space for different hyperparameter combinations was heavily restricted. With the same reasoning no statistical significance testing was performed and experiments for each setup only performed once. This weighs even more heavy for this project since the student model reach very good results even without knowledge distillation and the different distillation techniques are very close in performance. Therefore, the results can only be interpreted as indications, especially regarding the differences between different knowledge distillation techniques.
+For a few experiments a batch size of $ 32 $ was also tested and achieved slightly better results but due to the increased training time with a reduced batch size, this was not further pursued.
+The captured data for training and inference speed is very noisy likely because of the shared nature of the computing resource, therefore for speeds the median batch time or the minimum epoch times are reported.
 
 \newpage
-
+"The computations/data handling/[SIMILAR] were/was enabled by resources provided by the National Academic Infrastructure for Supercomputing in Sweden (NAISS) at [NAISS AFFILIATED SITE] partially funded by the Swedish Research Council through grant agreement no. 2022-06725."
 \section*{Appendix}
 \bibliographystyle{plain}
 \bibliography{bib}
