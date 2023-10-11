@@ -76,7 +76,7 @@
   \texttt{XXX@student.gu.se}
   \and
   Moritz Sprenger\\
-  \texttt{XXX@student.gu.se}
+  \texttt{gussprmo@student.gu.se}
   \and
   Raouf Bahsoun\\
   \texttt{XXX@student.gu.se}
@@ -157,7 +157,7 @@ Adopting their implementation of a global temperature, $ T $ is a single learnab
 
 \section{Experimental setup}
 In accordance with the project goals an ablation study with $ 4 $ different student architectures and the $ 3 $ described distillation techniques is conducted. As for student architectures we focused on efficient convolutional architectures especially designed for mobile and edge devices. The four considered architectures are \textit{Mobilenet-V3-small}, \textit{Mobilenet-V3-large} \cite{mobilenetv3}, Shufflenet \cite{shufflenet} and Ghostnet \cite{han2020ghostnet}. All network implementations are taken from PyTorch \cite{pytorch}. To confirm with the expected input sizes of these architectures, the greyscale image data is duplicated along the channel axis. Additionally, images are resized to $ 112 $\textit{px} sized square images and normalized. Throughout all experiments a batch size of $ 256 $ is used and models are trained for $ 20 $ epochs with early stopping. For all $ 4 $ student architectures experiments are performed with the $ 3 $ different knowledge distillation techniques and training from scratch without any distillation. For vanilla knowledge distillation different values for the temperature are investigated. Conditional knowledge distillation is conducted with a temperature of $ 4 $. For the curriculum-based knowledge distillation linear and cosine decay are investigated.
-As performance metrics we report validation accuracy and validation $ F1 $-score. For size and speed metrics, the inference and train speed are reported as well as the model size in \textit{Megabytes} and as the number  of trainable parameters.
+As performance metrics we report validation accuracy and validation $ F1 $-score. For size and speed metrics, the inference and train speed are reported as well as the model size in \textit{Megabytes} and the number  of trainable parameters.
 All experiments are conducted with a single \textit{Nvidia A40} GPU. 
 \section{Limitations}
 Due to the limited available time for the project and project specific circumstances multiple limitations have to be considered regarding the achieved results. Because of significant training times and the time constraints set by the project course the search space for different hyperparameter combinations was heavily restricted. With the same reasoning no statistical significance testing was performed and experiments for each setup only performed once. This weighs even more heavy for this project since the student model reach very good results even without knowledge distillation and the different distillation techniques are very close in performance. Therefore, the results can only be interpreted as indications, especially regarding the differences between different knowledge distillation techniques.
