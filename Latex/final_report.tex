@@ -73,7 +73,7 @@
 \title{Final report \\ Knowledge distillation for echocardiogram view classification}
 \author{
   Andris Freimanis\\
-  \texttt{XXX@student.gu.se}
+  \texttt{gusandrifr@student.gu.se}
   \and
   Moritz Sprenger\\
   \texttt{gussprmo@student.gu.se}
@@ -113,7 +113,7 @@ A cornerstone of model compression, knowledge distillation, remains a central fo
 
 In addition, “Conditional Teacher-Student Learning” by Meng et al. has broadened the perspective of knowledge distillation \cite{meng2019conditional}. Their method introduces a dynamic teacher selection mechanism that tailors the choice of teacher models to the characteristics of input data. This adaptation ensures that the student network can choose from a selection of teacher models, each suited to specific input conditions. This approach promises substantial gains in both efficiency and accuracy, potentially setting the stage for customizing knowledge distillation techniques to real-world data scenarios.
 
-“Learning Efficient Object Detection Models with Knowledge Distillation” by Chen et al. provides an overview of knowledge distillation techniques, highlighting its significance in model compression \cite{chenLearningEfficientObject2017}. The article provides an understanding of the principles and methods employed in knowledge distillation, making ground for the approaches presented by Li et al. \cite{\cite{li2023curriculum}} and Meng et al. \cite{meng2019conditional}. Meanwhile, the article by Hinton et al. “Distilling the Knowledge in a Neural Network” laid the groundwork for knowledge distillation, introducing the concept of teacher-student model learning and its potential to improve model generalization \cite{hintonDistillingKnowledgeNeural2015}.
+“Learning Efficient Object Detection Models with Knowledge Distillation” by Chen et al. provides an overview of knowledge distillation techniques, highlighting its significance in model compression \cite{chenLearningEfficientObject2017}. The article provides an understanding of the principles and methods employed in knowledge distillation, making ground for the approaches presented by Li et al. \cite{li2023curriculum} and Meng et al. \cite{meng2019conditional}. Meanwhile, the article by Hinton et al. “Distilling the Knowledge in a Neural Network” laid the groundwork for knowledge distillation, introducing the concept of teacher-student model learning and its potential to improve model generalization \cite{hintonDistillingKnowledgeNeural2015}.
 
 Further exploring the literature, “A Survey of Quantization Methods for Efficient Neural Network Inference” by Gholami et al. is an important resource in terms of model compression \cite{gholamiSurveyQuantizationMethods2021}. This survey presents various quantization techniques, highlighting the potential for significant compression with minimal accuracy loss. The survey by Choudhary et al., “A comprehensive survey on model compression and acceleration”, introduces additional importance to these techniques in the context of resource-constrained deployments \cite{choudharyComprehensiveSurveyModel2020}.
 \newpage
@@ -168,6 +168,48 @@ Adopting their implementation of a global temperature, $ T $ is a single learnab
 In accordance with the project goals an ablation study with $ 4 $ different student architectures and the $ 3 $ described distillation techniques is conducted. As for student architectures we focused on efficient convolutional architectures especially designed for mobile and edge devices. The four considered architectures are \textit{Mobilenet-V3-small}, \textit{Mobilenet-V3-large} \cite{mobilenetv3}, Shufflenet \cite{shufflenet} and Ghostnet \cite{han2020ghostnet}. All network implementations are taken from PyTorch \cite{pytorch}. To confirm with the expected input sizes of these architectures, the greyscale image data is duplicated along the channel axis. Additionally, images are resized to $ 112 $\textit{px} sized square images and normalized. Throughout all experiments a batch size of $ 256 $ is used and models are trained for $ 20 $ epochs with early stopping. For all $ 4 $ student architectures experiments are performed with the $ 3 $ different knowledge distillation techniques and training from scratch without any distillation. For vanilla knowledge distillation different values for the temperature are investigated. Conditional knowledge distillation is conducted with a temperature of $ 4 $. For the curriculum-based knowledge distillation linear and cosine decay are investigated.
 As performance metrics we report validation accuracy and validation $ F1 $-score. For size and speed metrics, the inference and train speed are reported as well as the model size in \textit{Megabytes} and the number  of trainable parameters.
 All experiments are conducted with a single \textit{Nvidia A40} GPU. 
+
+\section{Results}
+
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{assets/val accuracy_Best}
+	\caption{Results for different student architectures}
+	\label{fig:acc_res}
+\end{figure}
+
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{assets/fat_plot_best}
+	\caption{Results for different student architectures}
+	\label{fig:scatter_res}
+\end{figure}
+
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{assets/fat_plot_best KD}
+	\caption{Results for different student architectures}
+	\label{fig:scatter_kd_res}
+\end{figure}
+
+% Our experiments yielded promising results, demonstrating the effectiveness of knowledge distillation for Convolutional Neural Networks (CNNs). We present our findings in two plots.
+
+In Figure \ref{fig:acc_res}, the validation accuracy of the teacher model is represented by a red dashed line, while the best Knowledge Distillation (KD) model and the model trained from scratch for each of the four student architectures are also plotted. It's interesting to note that the validation accuracies of the KD models are not only closely aligned with that of the teacher model, indicating successful knowledge transfer, but they also marginally yet consistently outperform the models trained from scratch for each student architecture. This suggests that all architectures perform comparably well and that KD provides a slight but consistent advantage. The validation accuracy is very close to the teacher for all student architectures.
+
+In our experiments, each student architecture had a different set of optimal hyperparameters. The GhostNet model achieved its best performance using curriculum learning with a linear decay schedule for temperature and a loss rate of 0.5. For the MobileNet V3 Large and ShuffleNet models, the optimal performance is obtained with a temperature parameter of 2 and a loss rate of 0.5. On the other hand, the MobileNet V3 Small model performs best when curriculum learning is combined with cosine decay schedule for temperature and a loss rate of 0.5.
+
+In Figure \ref{fig:scatter_res}, a scatter plot is presented that illustrates the relative validation accuracy (compared to the teacher model) and inference speedup of each student model, both for models trained using Knowledge Distillation (KD) and those trained from scratch. The thickness of each point represents the memory footprint of the model in MB.
+
+All KD student models achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times. However, the models trained from scratch showed a decrease in accuracy down to 0.95. This reinforces the effectiveness of KD, as it consistently outperforms training from scratch.
+
+Interestingly, there are some variations in the inference speed even between models with the same architecture. This could be attributed to slightly inconsistent allocation of hardware resources and memory index management. Despite these variations, the inference speed is generally close for all architectures.
+
+Among all models, MobileNet V3 Large had the highest relative validation accuracy at 0.98. The two smaller models, MobileNet V3 Small and ShuffleNet, achieved slightly higher inference speedups of 1.4 times.
+
+These results suggest that KD enables student models to achieve comparable performance to their teacher models while benefiting from increased inference speed and reduced memory usage.
+
+Figure \ref{fig:scatter_kd_res} provides a focused view on only the KD models, further emphasizing these observations.
+
 \section{Limitations}
 Due to the limited available time for the project and project specific circumstances multiple limitations have to be considered regarding the achieved results. Because of significant training times and the time constraints set by the project course the search space for different hyperparameter combinations was heavily restricted. With the same reasoning no statistical significance testing was performed and experiments for each setup only performed once. This weighs even more heavy for this project since the student model reach very good results even without knowledge distillation and the different distillation techniques are very close in performance. Therefore, the results can only be interpreted as indications, especially regarding the differences between different knowledge distillation techniques.
 For a few experiments a batch size of $ 32 $ was also tested and achieved slightly better results but due to the increased training time with a reduced batch size, this was not further pursued.
