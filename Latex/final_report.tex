@@ -150,7 +150,7 @@ Next to the type of transferred knowledge and the distillation algorithm, the ar
 Due to the compression intention behind the KD approach most student networks are less complex than the teacher networks. This can either be achieved by student models being a simplified version of the teachers with less layers and/or channels \cite{wangProgressiveBlockwiseKnowledge2018,liFewSampleKnowledge2020}, a quantized network with the same structure \cite{shinKnowledgeDistillationOptimization2019} or other size optimized network architectures \cite{howardMobileNetsEfficientConvolutional2017,guSearchBetterStudents2020a}. In online distillation settings, teacher models can have the same architecture as the student or be an ensemble of them \cite{zhangDeepMutualLearning2017}. Due to the capacity gap between larger teacher and smaller student networks, the student networks might not be able to replicate the performance of teachers \cite{mirzadehImprovedKnowledgeDistillation2019}. Some works tackle this problem by reducing the student capacity in a controlled manner \cite{guSearchBetterStudents2020a} or by iteratively introducing smaller and smaller teacher assistants that are first acting as the student and then as the teacher for the next teacher assistant until the desired size of a final student model is reached.
 
 
-\section{Methods/Prerequisites}
+\section{Methods}
 Given the described initial conditions for our project, we decided to focus on offline response-based knowledge distillation techniques and investigate the trade-off between performance and model size/speed. This can be explained by the availability of an already trained and well performing teacher network and the transferability of response-based implementations between different network structures.
 We identified three response-based knowledge distillation techniques suitable for the required task.
 \newline
@@ -274,6 +274,7 @@ For a few experiments a batch size of $ 32 $ was also tested and achieved slight
 The captured data for training and inference speed is very noisy likely because of the shared nature of the computing resource, therefore for speeds the median batch time or the minimum epoch times are reported.
 
 \newpage
+"The computations/data handling/[SIMILAR] were/was enabled by resources provided by the National Academic Infrastructure for Supercomputing in Sweden (NAISS) at [NAISS AFFILIATED SITE] partially funded by the Swedish Research Council through grant agreement no. 2022-06725."
 \section*{Appendix}
 \bibliographystyle{plain}
 \bibliography{bib}
