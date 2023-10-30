@@ -10,6 +10,7 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 \usepackage{multirow}
+\usepackage{float}
 %\usepackage{algorithmicx}
 
 % Margins
@@ -205,46 +206,67 @@ In accordance with the project goals an ablation study with $ 4 $ different stud
 As performance metrics we report validation accuracy and validation $ F1 $-score. For size and speed metrics, the inference and train speed are reported as well as the model size in \textit{Megabytes} and the number  of trainable parameters.
 All experiments are conducted with a single \textit{Nvidia A40} GPU. 
 
-\section{Results}
-
-\begin{figure}
+\begin{figure}[H]
 	\centering
-	\includegraphics[width=\linewidth]{assets/val accuracy_Best}
-	\caption{Results for different student architectures}
+	\includegraphics[width=0.9\linewidth]{assets/val accuracy_Best}
+	\caption{Validation Accuracy of Different Student Architectures}
 	\label{fig:acc_res}
 \end{figure}
 
+\section{Results}
+Figure \ref{fig:acc_res} depicts the validation accuracy of the teacher model, represented by a red dashed line, along with the best model trained with Knowledge Distillation (KD) and the model trained from scratch for each of the four student architectures. Notably, the validation accuracies of the models trained with KD closely align with that of the teacher model, indicating successful knowledge transfer. They also marginally yet consistently outperform the models trained from scratch for each student architecture. This indicates that all architectures perform comparably well and that KD offers a consistent advantage. The validation accuracy is very close to the teacher for all student architectures, as shown in Figures \ref{fig:val_acc_ghostnet}, \ref{fig:val_acc_mobilenet_large}, \ref{fig:val_acc_mobilenet_small} and \ref{fig:val_acc_shufflenet}.
+
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.9\linewidth]{assets/validation accuracy_ghostnet.png}
+	\caption{Validation Accuracy of GhostNet}
+	\label{fig:val_acc_ghostnet}
+\end{figure}
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.9\linewidth]{assets/validation accuracy_mobilenet-V3-large.png}
+	\caption{Validation Accuracy of MobileNet V3 Large}
+	\label{fig:val_acc_mobilenet_large}
+\end{figure}
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.9\linewidth]{assets/validation accuracy_mobilenet-V3-small.png}
+	\caption{Validation Accuracy of MobileNet V3 Small}
+	\label{fig:val_acc_mobilenet_small}
+\end{figure}
+\begin{figure}[htbp]
+	\centering
+	\includegraphics[width=0.9\linewidth]{assets/validation accuracy_shufflenet.png}
+	\caption{Validation Accuracy of ShuffleNet}
+	\label{fig:val_acc_shufflenet}
+\end{figure}
+
+Our experiments revealed distinct optimal hyperparameters for each student architecture. The GhostNet model achieved its best performance using curriculum learning with a linear decay schedule for temperature and a loss rate of 0.5. For the MobileNet V3 Large and ShuffleNet models, optimal performance is obtained with a temperature parameter of 2 and a loss rate of 0.5. On the other hand, the MobileNet V3 Small model performs best when curriculum learning is combined with cosine decay schedule for temperature and a loss rate of 0.5.
+
 \begin{figure}
 	\centering
-	\includegraphics[width=\linewidth]{assets/fat_plot_best}
-	\caption{Results for different student architectures}
+	\includegraphics[width=0.9\linewidth]{assets/fat_plot_best}
+	\caption{Relative Validation Accuracy and Inference Speedup of Different Student Architectures Trained with KD and from Scratch}
 	\label{fig:scatter_res}
 \end{figure}
 
+Figure \ref{fig:scatter_res} depicts a scatter plot that illustrates the relative validation accuracy (compared to the teacher model) and inference speedup of each student model, both for models trained with KD and those trained from scratch. The thickness of each point represents the memory footprint of the model in MB.
+
+All student models, when trained with KD, achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times. However, models trained from scratch showed a decrease in accuracy down to 0.95. Interestingly, there are some variations in inference speed even between models with the same architecture which could be attributed to slightly inconsistent allocation of hardware resources or variations in memory management during inference operations. Despite these variations, inference speed is generally close across all architectures.
+
+Among all models, MobileNet V3 Large had the highest relative validation accuracy at 0.98 while MobileNet V3 Small and ShuffleNet achieved slightly higher inference speedups of 1.4 times.
+
+These findings suggest that student models trained with KD not only match the performance of their teacher models but also benefit from faster inference speed and lower memory usage.
+
 \begin{figure}
 	\centering
-	\includegraphics[width=\linewidth]{assets/fat_plot_best KD}
-	\caption{Results for different student architectures}
+	\includegraphics[width=0.9\linewidth]{assets/fat_plot_best KD}
+	\caption{Relative Validation Accuracy and Inference Speedup of Different Student Architectures Trained with KD}
 	\label{fig:scatter_kd_res}
 \end{figure}
 
-% Our experiments yielded promising results, demonstrating the effectiveness of knowledge distillation for Convolutional Neural Networks (CNNs). We present our findings in two plots.
+Figure \ref{fig:scatter_kd_res} provides a focused view on only those models trained with KD, further emphasizing these observations.
 
-In Figure \ref{fig:acc_res}, the validation accuracy of the teacher model is represented by a red dashed line, while the best Knowledge Distillation (KD) model and the model trained from scratch for each of the four student architectures are also plotted. It's interesting to note that the validation accuracies of the KD models are not only closely aligned with that of the teacher model, indicating successful knowledge transfer, but they also marginally yet consistently outperform the models trained from scratch for each student architecture. This suggests that all architectures perform comparably well and that KD provides a slight but consistent advantage. The validation accuracy is very close to the teacher for all student architectures.
-
-In our experiments, each student architecture had a different set of optimal hyperparameters. The GhostNet model achieved its best performance using curriculum learning with a linear decay schedule for temperature and a loss rate of 0.5. For the MobileNet V3 Large and ShuffleNet models, the optimal performance is obtained with a temperature parameter of 2 and a loss rate of 0.5. On the other hand, the MobileNet V3 Small model performs best when curriculum learning is combined with cosine decay schedule for temperature and a loss rate of 0.5.
-
-In Figure \ref{fig:scatter_res}, a scatter plot is presented that illustrates the relative validation accuracy (compared to the teacher model) and inference speedup of each student model, both for models trained using Knowledge Distillation (KD) and those trained from scratch. The thickness of each point represents the memory footprint of the model in MB.
-
-All KD student models achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times. However, the models trained from scratch showed a decrease in accuracy down to 0.95. This reinforces the effectiveness of KD, as it consistently outperforms training from scratch.
-
-Interestingly, there are some variations in the inference speed even between models with the same architecture. This could be attributed to slightly inconsistent allocation of hardware resources and memory index management. Despite these variations, the inference speed is generally close for all architectures.
-
-Among all models, MobileNet V3 Large had the highest relative validation accuracy at 0.98. The two smaller models, MobileNet V3 Small and ShuffleNet, achieved slightly higher inference speedups of 1.4 times.
-
-These results suggest that KD enables student models to achieve comparable performance to their teacher models while benefiting from increased inference speed and reduced memory usage.
-
-Figure \ref{fig:scatter_kd_res} provides a focused view on only the KD models, further emphasizing these observations.
 
 \section{Limitations}
 Due to the limited available time for the project and project specific circumstances multiple limitations have to be considered regarding the achieved results. Because of significant training times and the time constraints set by the project course the search space for different hyperparameter combinations was heavily restricted. With the same reasoning no statistical significance testing was performed and experiments for each setup only performed once. This weighs even more heavy for this project since the student model reach very good results even without knowledge distillation and the different distillation techniques are very close in performance. Therefore, the results can only be interpreted as indications, especially regarding the differences between different knowledge distillation techniques.
