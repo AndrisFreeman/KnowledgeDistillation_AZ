@@ -1,4 +1,4 @@
-\documentclass{article}
+\documentclass[14pt]{article}
 
 \usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
@@ -252,7 +252,7 @@ Our experiments revealed distinct optimal hyperparameters for each student archi
 
 Figure \ref{fig:scatter_res} depicts a scatter plot that illustrates the relative validation accuracy (compared to the teacher model) and inference speedup of each student model, both for models trained with KD and those trained from scratch. The thickness of each point represents the memory footprint of the model in MB.
 
-All student models, when trained with KD, achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times. However, models trained from scratch showed a decrease in accuracy down to 0.95. Interestingly, there are some variations in inference speed even between models with the same architecture which could be attributed to slightly inconsistent allocation of hardware resources or variations in memory management during inference operations. Despite these variations, inference speed is generally close across all architectures.
+All student models, when trained with KD, achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times. However, models trained from scratch showed a decrease in relative validation accuracy down to 0.95. Interestingly, there are some variations in inference speed even between models with the same architecture which could be attributed to slightly inconsistent allocation of hardware resources or variations in memory management during inference operations. Despite these variations, inference speed is generally close across all architectures.
 
 Among all models, MobileNet V3 Large had the highest relative validation accuracy at 0.98 while MobileNet V3 Small and ShuffleNet achieved slightly higher inference speedups of 1.4 times.
 
@@ -272,6 +272,34 @@ Figure \ref{fig:scatter_kd_res} provides a focused view on only those models tra
 Due to the limited available time for the project and project specific circumstances multiple limitations have to be considered regarding the achieved results. Because of significant training times and the time constraints set by the project course the search space for different hyperparameter combinations was heavily restricted. With the same reasoning no statistical significance testing was performed and experiments for each setup only performed once. This weighs even more heavy for this project since the student model reach very good results even without knowledge distillation and the different distillation techniques are very close in performance. Therefore, the results can only be interpreted as indications, especially regarding the differences between different knowledge distillation techniques.
 For a few experiments a batch size of $ 32 $ was also tested and achieved slightly better results but due to the increased training time with a reduced batch size, this was not further pursued.
 The captured data for training and inference speed is very noisy likely because of the shared nature of the computing resource, therefore for speeds the median batch time or the minimum epoch times are reported.
+
+\section{Conclusion}
+
+This study successfully demonstrates the application of knowledge distillation (KD) techniques in echocardiogram view classification. The conducted experiments reveal that KD offers a consistent, albeit small, advantage over models trained from scratch, regardless of the student architecture used. This is evident from the validation accuracies of models trained with KD. These accuracies closely align with that of the teacher model and marginally outperform those of models trained from scratch.
+
+Additionally, the study highlights that different student architectures require distinct optimal hyperparameters for best performance. For instance, GhostNet achieved its best performance using curriculum learning with a linear decay schedule for temperature and a loss rate of 0.5, while ShuffleNet performed best with a temperature parameter of 2 and a loss rate of 0.5.
+
+Furthermore, all student models trained with KD achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times. However, models trained from scratch showed a decrease in relative validation accuracy down to 0.95.
+
+Among all models, MobileNet V3 Large had the highest relative validation accuracy at 0.98 while MobileNet V3 Small and ShuffleNet achieved slightly higher inference speedups of 1.4 times.
+
+These findings confirm that student models trained with KD not only match the performance of their teacher model on this task but also benefit from faster inference speed and lower memory usage.
+
+However, due to significant training times and project course time constraints, the search space for different hyperparameter combinations was heavily restricted. For the same reasons, no statistical significance testing was performed, and each experiment setup was only performed once. Therefore, these results can only be interpreted as indications, especially regarding inference speed differences between different KD techniques.
+
+In conclusion, this study underscores the effectiveness of KD in improving the performance of student models in echocardiogram view classification. It also emphasizes the importance of selecting appropriate hyperparameters based on the specific student architecture used.
+
+\section{Discussion}
+
+This study aimed to apply knowledge distillation (KD) techniques to echocardiogram view classification by comparing the performance of models trained with KD to those trained from scratch. The results indicate that KD offers a consistent advantage over models trained from scratch, regardless of the student architecture used. This is evident from the validation accuracies of models trained with KD, which closely align with that of the teacher model and marginally outperform models trained from scratch.
+
+The use of KD in this context has significant practical implications: by reducing memory requirements and increasing inference speed, these models could potentially be deployed locally in resource-constrained environments such as medical equipment. This would enable real-time prediction of echocardiogram views, leading to more efficient and accurate diagnoses in the medical field.
+
+However, it's important to note that due to significant training times and project course time constraints, the search space for different hyperparameter combinations was heavily restricted. This limitation could potentially be addressed in future research by allowing for a larger search space for hyperparameter combinations and conducting multiple runs of each experiment setup to ensure statistical significance.
+
+Interestingly, by using a relatively small (16 layers) VGG16 model as the teacher model, the student architectures achieved only small increases in inference speed. This suggests that other compression techniques might be more suitable if the teacher model is already relatively small.
+
+In conclusion, this study underscores the effectiveness of KD in improving the performance of student models in echocardiogram view classification. It also emphasizes the importance of selecting appropriate hyperparameters based on the specific student architecture used. Future research could explore more student architectures and other model compression techniques such as quantization and pruning or a combination thereof.
 
 \newpage
 "The computations/data handling/[SIMILAR] were/was enabled by resources provided by the National Academic Infrastructure for Supercomputing in Sweden (NAISS) at [NAISS AFFILIATED SITE] partially funded by the Swedish Research Council through grant agreement no. 2022-06725."
