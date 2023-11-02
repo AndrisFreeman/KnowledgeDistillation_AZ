@@ -13,6 +13,7 @@
   "pretrained": false,
   "train_split": 0.8,
   "teacher_model_name": "vgg16",
+  "cpu_data_batch_time": 0.015118922073207556,
   "finetuned": false,
   "filename": "mobilenet-V3-large-best;0.975182-lr;0.001-bs;256-weight_decay;0-train_dir;real_data-val_dir;val-T;4-loss_ratio;0.5",
   "train_speed": [
