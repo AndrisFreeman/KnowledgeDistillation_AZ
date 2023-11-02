@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[11pt]{article}
 
 \usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
@@ -276,6 +276,19 @@ Due to the limited available time for the project and project specific circumsta
 For a few experiments a batch size of $ 32 $ was also tested and achieved slightly better results but due to the increased training time with a reduced batch size, this was not further pursued.
 The captured data for training and inference speed is very noisy, likely because of the shared nature of the computing resource, therefore for speeds the median batch time or the minimum epoch times are reported.
 
+\section{Discussion}
+
+This study aimed to apply knowledge distillation (KD) techniques to echocardiogram view classification by comparing the performance of models trained with KD to those trained from scratch. The results indicate that KD offers a consistent advantage over models trained from scratch, regardless of the student architecture used. This is evident from the validation accuracies of models trained with KD, which closely align with that of the teacher model and outperform models trained from scratch.
+
+The use of KD in this context has significant practical implications: by reducing memory requirements and increasing inference speed, these models could potentially be deployed locally in resource-constrained environments such as medical equipment. This would enable real-time prediction of echocardiogram views, leading to more efficient and accurate diagnoses in the medical field.
+
+However, it's important to note that due to significant training times and project course time constraints, the search space for different hyperparameter combinations was heavily restricted. This limitation could potentially be addressed in future research by allowing for a larger search space for hyperparameter combinations and conducting multiple runs of each experiment setup to ensure statistical significance.
+
+Interestingly, by using a relatively small (16 layers) VGG16 model as the teacher model, the student architectures achieved only small increases in inference speed. This suggests that other compression techniques might be more suitable if the teacher model is already relatively small.
+
+In conclusion, this study underscores the effectiveness of KD in improving the performance of student models in echocardiogram view classification. It also emphasizes the importance of selecting appropriate hyperparameters based on the specific student architecture used. Future research could explore more student architectures and other model compression techniques such as quantization and pruning or a combination thereof.
+
+
 \section{Conclusion}
 
 This study successfully demonstrates the application of knowledge distillation (KD) techniques in echocardiogram view classification. The conducted experiments reveal that KD offers a consistent, albeit small, advantage over models trained from scratch, regardless of the student architecture used. This is evident from the validation accuracies of models trained with KD. These accuracies closely align with that of the teacher model and marginally outperform those of models trained from scratch.
@@ -292,17 +305,6 @@ However, due to significant training times and project course time constraints, 
 
 In conclusion, this study underscores the effectiveness of KD in improving the performance of student models in echocardiogram view classification. It also emphasizes the importance of selecting appropriate hyperparameters based on the specific student architecture used.
 
-\section{Discussion}
-
-This study aimed to apply knowledge distillation (KD) techniques to echocardiogram view classification by comparing the performance of models trained with KD to those trained from scratch. The results indicate that KD offers a consistent advantage over models trained from scratch, regardless of the student architecture used. This is evident from the validation accuracies of models trained with KD, which closely align with that of the teacher model and marginally outperform models trained from scratch.
-
-The use of KD in this context has significant practical implications: by reducing memory requirements and increasing inference speed, these models could potentially be deployed locally in resource-constrained environments such as medical equipment. This would enable real-time prediction of echocardiogram views, leading to more efficient and accurate diagnoses in the medical field.
-
-However, it's important to note that due to significant training times and project course time constraints, the search space for different hyperparameter combinations was heavily restricted. This limitation could potentially be addressed in future research by allowing for a larger search space for hyperparameter combinations and conducting multiple runs of each experiment setup to ensure statistical significance.
-
-Interestingly, by using a relatively small (16 layers) VGG16 model as the teacher model, the student architectures achieved only small increases in inference speed. This suggests that other compression techniques might be more suitable if the teacher model is already relatively small.
-
-In conclusion, this study underscores the effectiveness of KD in improving the performance of student models in echocardiogram view classification. It also emphasizes the importance of selecting appropriate hyperparameters based on the specific student architecture used. Future research could explore more student architectures and other model compression techniques such as quantization and pruning or a combination thereof.
 
 \newpage
 \section*{Acknowledgment}
