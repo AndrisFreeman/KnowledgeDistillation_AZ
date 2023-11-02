@@ -270,6 +270,14 @@ These findings suggest that student models trained with KD not only match the pe
 
 Figure \ref{fig:scatter_kd_res} provides a focused view on only those models trained with KD, further emphasizing these observations.
 
+\begin{figure}
+	\centering
+	\includegraphics[width=0.9\linewidth]{assets/fat_plot_best KD (CPU)}
+	\caption{Relative Validation Accuracy and Inference Speedup of Different Student Architectures Trained with KD}
+	\label{fig:scatter_kd_cpu_res}
+\end{figure}
+
+We also conducted the same experiments on a CPU and achieved significant inference speedups compared to those run on a GPU. Figure \ref{fig:scatter_kd_cpu_res} illustrates inference speedups ranging from 5 to 9 times over the teacher model. ShuffleNet offers the highest inference speedup, slightly over 9 times, with a relative validation accuracy of 0.973. The large and small MobileNet architectures are roughly similar. Although the larger architecture delivers slightly better relative accuracy performance (0.979) compared to the smaller one (0.976), the latter appears to be slightly faster than the former. GhostNet yields the smallest inference speedup, at 5 times, while maintaining 0.975 of the teacher model’s validation accuracy.
 
 \section{Limitations}
 Due to the limited available time for the project and project specific circumstances multiple limitations have to be considered regarding the achieved results. Because of significant training times and the time constraints set by the project course, the search space for different hyperparameter combinations was heavily restricted. With the same reasoning no statistical significance testing was performed and experiments for each setup only performed once. This weighs even more heavy for this project since the student models reach very good results even without knowledge distillation and the different distillation techniques are very close in performance. Therefore, the results can only be interpreted as indications, especially regarding the differences between different knowledge distillation techniques.
