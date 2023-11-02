@@ -12,6 +12,7 @@
   "greyscale": false,
   "pretrained": false,
   "train_split": 0.8,
+  "cpu_data_batch_time": 0.014175969431121788,
   "teacher_model_name": "vgg_astra",
   "finetuned": false,
   "conditional": true,

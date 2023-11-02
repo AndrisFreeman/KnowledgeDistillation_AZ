@@ -8012,5 +8012,7 @@
     3,
     3
   ],
-  "inference_batch_time": 0.008614659309387207
+  "inference_batch_time": 0.010195612907409668,
+  "cpu_batch_time": 0.012110471725463867,
+  "cpu_data_batch_time": 0.011260047895458451
 }

@@ -61,6 +61,7 @@
   ],
   "student_memory": 5.852264404296875,
   "student_num_params": 1521956,
+  "cpu_data_batch_time": 0.014175969431121788,
   "train_loss": [
     3.705725600484942,
     0.695913445509848,

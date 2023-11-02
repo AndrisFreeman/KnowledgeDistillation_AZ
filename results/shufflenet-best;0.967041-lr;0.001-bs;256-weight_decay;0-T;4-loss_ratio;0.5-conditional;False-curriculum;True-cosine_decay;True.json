@@ -14,6 +14,7 @@
   "train_split": 0.8,
   "teacher_model_name": "vgg16",
   "finetuned": false,
+  "cpu_data_batch_time": 0.011260047895458451,
   "conditional": false,
   "curriculum": true,
   "cosine_decay": true,

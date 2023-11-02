@@ -12,6 +12,7 @@
   "greyscale": false,
   "pretrained": false,
   "train_split": 0.8,
+  "cpu_data_batch_time": 0.011260047895458451,
   "teacher_model_name": "vgg16",
   "finetuned": false,
   "conditional": false,
