@@ -8,6 +8,22 @@
   year={2022},
   publisher={American College of Cardiology Foundation Washington DC}
 }
+
+@online{shinKnowledgeDistillationOptimization2019,
+	title = {Knowledge Distillation for Optimization of Quantized Deep Neural Networks},
+	author = {Shin, Sungho and Boo, Yoonho and Sung, Wonyong},
+	date = {2019-10-23},
+	eprint = {1909.01688},
+	eprinttype = {arxiv},
+	eprintclass = {cs, stat},
+	doi = {10.48550/arXiv.1909.01688},
+	url = {http://arxiv.org/abs/1909.01688},
+	urldate = {2023-09-08},
+	abstract = {Knowledge distillation (KD) is a very popular method for model size reduction. Recently, the technique is exploited for quantized deep neural networks (QDNNs) training as a way to restore the performance sacrificed by word-length reduction. KD, however, employs additional hyper-parameters, such as temperature, coefficient, and the size of teacher network for QDNN training. We analyze the effect of these hyper-parameters for QDNN optimization with KD. We find that these hyper-parameters are inter-related, and also introduce a simple and effective technique that reduces \textbackslash textit\{coefficient\} during training. With KD employing the proposed hyper-parameters, we achieve the test accuracy of 92.7\% and 67.0\% on Resnet20 with 2-bit ternary weights for CIFAR-10 and CIFAR-100 data sets, respectively.},
+	pubstate = {preprint},
+	keywords = {Computer Science - Machine Learning,Statistics - Machine Learning},
+	file = {C\:\\Users\\mospr\\Zotero\\storage\\A4ME3BKJ\\Shin et al. - 2019 - Knowledge distillation for optimization of quantiz.pdf;C\:\\Users\\mospr\\Zotero\\storage\\XKNCQWIP\\1909.html}
+}
 @online{anilLargeScaleDistributed2018,
   title = {Large Scale Distributed Neural Network Training through Online Distillation},
   author = {Anil, Rohan and Pereyra, Gabriel and Passos, Alexandre and Ormandi, Robert and Dahl, George E. and Hinton, Geoffrey E.},
@@ -503,7 +519,7 @@
   eprint = {2306.08543},
   eprinttype = {arxiv},
   eprintclass = {cs},
-  doi = {10.48550/arXiv.2306.08543},
+  note = {10.48550/arXiv.2306.08543},
   url = {http://arxiv.org/abs/2306.08543},
   urldate = {2023-09-08},
   abstract = {Knowledge Distillation (KD) is a promising technique for reducing the high computational demand of large language models (LLMs). However, previous KD methods are primarily applied to white-box classification models or training small models to imitate black-box model APIs like ChatGPT. How to effectively distill the knowledge from white-box generative LLMs is still under-explored, which becomes more and more important with the prosperity of LLMs. In this work, we propose MiniLLM that distills smaller language models from generative larger language models. We first replace the forward Kullback-Leibler divergence (KLD) objective in the standard KD approaches with reverse KLD, which is more suitable for KD on generative language models, to prevent the student model from overestimating the low-probability regions of the teacher distribution. Then, we derive an effective optimization approach to learn this objective. Extensive experiments in the instruction-following setting show that the MiniLLM models generate more precise responses with the higher overall quality, lower exposure bias, better calibration, and higher long-text generation performance. Our method is also scalable for different model families with 120M to 13B parameters. We will release our code and model checkpoints at https://aka.ms/MiniLLM.},
@@ -625,7 +641,7 @@
   eprint = {1503.02531},
   eprinttype = {arxiv},
   eprintclass = {cs, stat},
-  doi = {10.48550/arXiv.1503.02531},
+  note = {10.48550/arXiv.1503.02531},
   url = {http://arxiv.org/abs/1503.02531},
   urldate = {2023-09-05},
   abstract = {A very simple way to improve the performance of almost any machine learning algorithm is to train many different models on the same data and then to average their predictions. Unfortunately, making predictions using a whole ensemble of models is cumbersome and may be too computationally expensive to allow deployment to a large number of users, especially if the individual models are large neural nets. Caruana and his collaborators have shown that it is possible to compress the knowledge in an ensemble into a single model which is much easier to deploy and we develop this approach further using a different compression technique. We achieve some surprising results on MNIST and we show that we can significantly improve the acoustic model of a heavily used commercial system by distilling the knowledge in an ensemble of models into a single model. We also introduce a new type of ensemble composed of one or more full models and many specialist models which learn to distinguish fine-grained classes that the full models confuse. Unlike a mixture of experts, these specialist models can be trained rapidly and in parallel.},
@@ -656,7 +672,7 @@
   eprint = {1704.04861},
   eprinttype = {arxiv},
   eprintclass = {cs},
-  doi = {10.48550/arXiv.1704.04861},
+  note = {10.48550/arXiv.1704.04861},
   url = {http://arxiv.org/abs/1704.04861},
   urldate = {2023-09-08},
   abstract = {We present a class of efficient models called MobileNets for mobile and embedded vision applications. MobileNets are based on a streamlined architecture that uses depth-wise separable convolutions to build light weight deep neural networks. We introduce two simple global hyper-parameters that efficiently trade off between latency and accuracy. These hyper-parameters allow the model builder to choose the right sized model for their application based on the constraints of the problem. We present extensive experiments on resource and accuracy tradeoffs and show strong performance compared to other popular models on ImageNet classification. We then demonstrate the effectiveness of MobileNets across a wide range of applications and use cases including object detection, finegrain classification, face attributes and large scale geo-localization.},
@@ -732,14 +748,16 @@
 }
 
 
+
 @inproceedings{KnowledgeDistillationOptimization,
-	title={Knowledge distillation for optimization of quantized deep neural networks},
 	author={Shin, Sungho and Boo, Yoonho and Sung, Wonyong},
-	booktitle={2020 IEEE Workshop on Signal Processing Systems (SiPS)},
-	pages={1--6},
+	booktitle={2020 IEEE Workshop on Signal Processing Systems (SiPS)}, 
+	title={Knowledge Distillation for Optimization of Quantized Deep Neural Networks}, 
 	year={2020},
-	organization={IEEE}
-}
+	volume={},
+	number={},
+	pages={1-6},
+	doi={10.1109/SiPS50750.2020.9195219}}
 
 @online{krishnamoorthiQuantizingDeepConvolutional2018,
   title = {Quantizing Deep Convolutional Networks for Efficient Inference: {{A}} Whitepaper},
