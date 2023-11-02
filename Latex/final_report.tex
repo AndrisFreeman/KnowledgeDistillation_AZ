@@ -154,6 +154,9 @@ Due to the compression intention behind the KD approach most student networks ar
 
 
 \section{Methods}
+Four ultrasound views are used to train the classification models which are A2C, A4C, PLAX, and PSAS. A2C is the apical two-chamber view. A4C is the apical four-chamber view. PLAX is parasternal Long-Axis view. PSAS is parasternal Short-axis view. When a patient is diagnosed by ultrasound, many sonograms are reconstructed into a video. Each video contains only one view. The videos were split into training, validation, and test sets. Each video in these sets was split into images. The videos used in this project come from three source datasets \cite{EchoNetDynamic}\cite{EchoNetLVH}\cite{Tufts}.
+
+
 Given the described initial conditions for our project, we decided to focus on offline response-based knowledge distillation techniques and investigate the trade-off between performance and model size/speed. This can be explained by the availability of an already trained and well performing teacher network and the transferability of response-based implementations between different network structures.
 We identified three response-based knowledge distillation techniques suitable for the required task.
 \newline
