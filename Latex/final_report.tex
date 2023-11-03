@@ -115,7 +115,7 @@ The ejection fraction can be measured by the following method: (1) Echocardiogra
 The basic principle of cardiac ultrasound uses the pulse-echo principle. The ultrasound transducer converts electrical signals into ultrasonic pulses. The pulse passes through the skin and into the internal anatomy at different speeds. When the ultrasonic sound waves encounter two different tissues with different characters or densities, the wave reflects. This phenomenon is called ultrasound reflection. The transducer receives the returning echoes and converts them to electric signals which a computer converts into points of brightness on the image corresponding to the anatomic position and the strength of the reflecting echoes. A complete image frame formed by ultrasound is called a sonogram. When a patient is diagnosed by ultrasound, many sonograms will be reconstructed into a video. 
 
 
-The limitation of cardiac ultrasound is that the ultrasound wave will be obstructed by air or bones and cannot obtain clear images. For some patients with chest wall abnormalities, emphysema, or obesity, it is hard to sample images with good resolution. This makes diagnosis difficult. Cardiac ultrasound is an examination that highly relies on technology and experience. Providing a machine learning model on a mobile device or the medical equipment, that helps classify these views, could assist and guide operators in sampling correct images. This would greatly improve the imaging quality and further assist doctors in more accurate measurements of left ventricular ejection fraction. This way, the hidden dangers of the patient’s heart can be detected earlier, or the effectiveness of the patient’s heart treatment can be measured more accurately. 
+The limitation of cardiac ultrasound is that the ultrasound wave will be obstructed by air or bones and cannot obtain clear images. For some patients with chest wall abnormalities, emphysema, or obesity, it is hard to sample images with good resolution. This makes diagnosis difficult. Cardiac ultrasound is an examination that highly relies on technology and experience. Providing a machine learning model on a mobile device or the medical equipment, that helps classify these views, could assist and guide operators in sampling correct images. This would greatly improve the imaging quality and further assist doctors in more accurate measurements of left ventricular ejection fraction. This way, the hidden dangers of the patient's heart can be detected earlier, or the effectiveness of the patient's heart treatment can be measured more accurately. 
 
 
 The purpose of this project is to use knowledge distillation to transfer the knowledge of an existing teacher model to a student model and find an optimal student model with high accuracy, fast classification speed, and small model size so that it can perform optimally on mobile devices, for instance on a Raspberry Pi computer, given the requirement of being able to produce a video at 30 frames per second and having a memory size of less than $ 50 $ Megabytes.
@@ -264,7 +264,7 @@ Among all models, MobileNet V3 Large had the highest relative validation accurac
 
 These findings suggest that student models trained with KD not only match the performance of their teacher models but also benefit from faster inference speed and lower memory usage.
 
-\begin{figure}
+\begin{figure}[htbp]
 	\centering
 	\includegraphics[width=0.9\linewidth]{assets/fat_plot_best KD}
 	\caption{Relative Validation Accuracy and Inference Speedup of Different Student Architectures Trained with KD}
@@ -273,14 +273,14 @@ These findings suggest that student models trained with KD not only match the pe
 
 Figure \ref{fig:scatter_kd_res} provides a focused view on only those models trained with KD, further emphasizing these observations.
 
-\begin{figure}
+\begin{figure}[htbp]
 	\centering
 	\includegraphics[width=0.9\linewidth]{assets/fat_plot_best KD (CPU)}
 	\caption{Relative Validation Accuracy and Inference Speedup of Different Student Architectures Trained with KD}
 	\label{fig:scatter_kd_cpu_res}
 \end{figure}
 
-We also conducted the same experiments on a CPU and achieved significant inference speedups compared to those run on a GPU. Figure \ref{fig:scatter_kd_cpu_res} illustrates inference speedups ranging from 5 to 9 times over the teacher model. ShuffleNet offers the highest inference speedup, slightly over 9 times, with a relative validation accuracy of 0.973. The large and small MobileNet architectures are roughly similar. Although the larger architecture delivers slightly better relative accuracy performance (0.979) compared to the smaller one (0.976), the latter appears to be slightly faster than the former. GhostNet yields the smallest inference speedup, at 5 times, while maintaining 0.975 of the teacher model’s validation accuracy.
+We also conducted the same experiments on a CPU and achieved significant inference speedups compared to those run on a GPU. Figure \ref{fig:scatter_kd_cpu_res} illustrates inference speedups ranging from 5 to 9 times over the teacher model. ShuffleNet offers the highest inference speedup, slightly over 9 times, with a relative validation accuracy of 0.973. The large and small MobileNet architectures are roughly similar. Although the larger architecture delivers slightly better relative accuracy performance (0.979) compared to the smaller one (0.976), the latter appears to be slightly faster than the former. GhostNet yields the smallest inference speedup, at 5 times, while maintaining 0.975 of the teacher model's validation accuracy.
 
 \section{Limitations}
 Due to the limited available time for the project and project specific circumstances multiple limitations have to be considered regarding the achieved results. Because of significant training times and the time constraints set by the project course, the search space for different hyperparameter combinations was heavily restricted. With the same reasoning no statistical significance testing was performed and experiments for each setup only performed once. This weighs even more heavy for this project since the student models reach very good results even without knowledge distillation and the different distillation techniques are very close in performance. Therefore, the results can only be interpreted as indications, especially regarding the differences between different knowledge distillation techniques.
@@ -289,16 +289,15 @@ The captured data for training and inference speed is very noisy, likely because
 
 \section{Discussion}
 
-This study aimed to apply knowledge distillation (KD) techniques to echocardiogram view classification by comparing the performance of models trained with KD to those trained from scratch. The results indicate that KD offers a consistent advantage over models trained from scratch, regardless of the student architecture used. This is evident from the validation accuracies of models trained with KD, which closely align with that of the teacher model and outperform models trained from scratch.
+This study aimed to apply knowledge distillation (KD) techniques to echocardiogram view classification by comparing the performance of models trained with KD to those trained from scratch. The results indicate that KD offers a consistent advantage over models trained from scratch, regardless of the student architecture used. This is evident from the validation accuracies of models trained with KD, which closely align with that of the teacher model and marginally outperform models trained from scratch.
 
 The use of KD in this context has significant practical implications: by reducing memory requirements and increasing inference speed, these models could potentially be deployed locally in resource-constrained environments such as medical equipment. This would enable real-time prediction of echocardiogram views, leading to more efficient and accurate diagnoses in the medical field.
 
+Interestingly, by using a relatively small (16 layers) VGG16 model as the teacher model, the student architectures achieved only small increases in inference speed on a GPU. However, when tested on a CPU, significant speedups were observed. This suggests that other compression techniques might be more suitable if the teacher model is already relatively small and if deployment is intended on devices with onboard GPUs.
+
 However, it's important to note that due to significant training times and project course time constraints, the search space for different hyperparameter combinations was heavily restricted. This limitation could potentially be addressed in future research by allowing for a larger search space for hyperparameter combinations and conducting multiple runs of each experiment setup to ensure statistical significance.
 
-Interestingly, by using a relatively small (16 layers) VGG16 model as the teacher model, the student architectures achieved only small increases in inference speed. This suggests that other compression techniques might be more suitable if the teacher model is already relatively small.
-
 In conclusion, this study underscores the effectiveness of KD in improving the performance of student models in echocardiogram view classification. It also emphasizes the importance of selecting appropriate hyperparameters based on the specific student architecture used. Future research could explore more student architectures and other model compression techniques such as quantization and pruning or a combination thereof.
-
 
 \section{Conclusion}
 
@@ -306,9 +305,9 @@ This study successfully demonstrates the application of knowledge distillation (
 
 Additionally, the study highlights that different student architectures require distinct optimal hyperparameters for best performance. For instance, GhostNet achieved its best performance using curriculum learning with a linear decay schedule for temperature and a loss rate of 0.5, while ShuffleNet performed best with a temperature parameter of 2 and a loss rate of 0.5.
 
-Furthermore, all student models trained with KD achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times. However, models trained from scratch showed a decrease in relative validation accuracy down to 0.95.
+Furthermore, all student models trained with KD achieved similar performance, with relative validation accuracies ranging from 0.975 to 0.98 and inference speedups between 1.35 and 1.4 times on a GPU. However, when the same experiments were conducted on a CPU, significant inference speedups ranging from 5 to 9 times over the teacher model were achieved. This is particularly important as it's more feasible that medical equipment will not have on-board GPUs, making these CPU results more realistic for deployment in resource-constrained environments.
 
-Among all models, MobileNet V3 Large had the highest relative validation accuracy at 0.98 while MobileNet V3 Small and ShuffleNet achieved slightly higher inference speedups of 1.4 times.
+Among all models, MobileNet V3 Large had the highest relative validation accuracy at 0.98 while MobileNet V3 Small and ShuffleNet achieved slightly higher inference speedups of 1.4 times on a GPU. ShuffleNet achieved the highest inference speedup of over 9 times on a CPU.
 
 These findings confirm that student models trained with KD not only match the performance of their teacher model on this task but also benefit from faster inference speed and lower memory usage.
 
