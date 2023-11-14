@@ -23,8 +23,8 @@
 \chead{}
 \rhead{}
 \lfoot{}
-\cfoot{}
-\rfoot{Page \thepage}
+\cfoot{\thepage}
+\rfoot{}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\footrulewidth}{0pt}
 
@@ -182,7 +182,7 @@ Combining equations \ref{eq:dist_loss} and \ref{eq:softmax_T} leads to equation 
 L_D(p(z_t, T), p(z_s, T)) = L_{KL}(p(z_t, T), p(z_s, T))
 \end{equation}
 
-To leverage the student's training data. the distillation loss can be combined with the student-/classification-loss $ L_S $, which is the cross-entropy loss between student outputs and the ground truth labels $ L_S = L_CE(y, p(z_s, T=1)) $. Combining these two losses, leads to a joint loss given in equation \ref{eq:joint_loss}, where $ \alpha $ is a balancing parameter between the two losses and the multiplication with $ T^2 $ is done to normalize the magnitude of the gradients \cite{hintonDistillingKnowledgeNeural2015}. Training with this loss function as an objective is further referred to as vanilla knowledge distillation.
+To leverage the student's training data, the distillation loss can be combined with the student-/classification-loss $ L_S $, which is the cross-entropy loss between student outputs and the ground truth labels $ L_S = L_{CE}(y, p(z_s, T=1)) $. Combining these two losses, leads to a joint loss given in equation \ref{eq:joint_loss}, where $ \alpha $ is a balancing parameter between the two losses and the multiplication with $ T^2 $ is done to normalize the magnitude of the gradients \cite{hintonDistillingKnowledgeNeural2015}. Training with this loss function as an objective is further referred to as vanilla knowledge distillation.
 
 \begin{equation}
 \label{eq:joint_loss}
@@ -191,7 +191,7 @@ L_J = \alpha  (L_D * T^2) + (1 - \alpha) L_S
 
 To avoid the heuristic tuning of the balancing hyperparameter $ \alpha $, Meng et al. suggest to simplify the joint loss $ L_J $. They suggest to only use the distillation loss when the teacher network makes a correct prediction, but replace the softmax outputs with the one-hot encoded hard labels when the teacher makes an incorrect prediction. They call this approach conditional teacher student learning \cite{meng2019conditional}. 
 
-Curriculum learning is a technique, where the learning difficulty is increased through the training process \cite{liCurriculumTemperatureKnowledge2022}. In contrast to a static and heuristically chosen hyperparameter $ T $ in the introduced methods so far, Zheng et al. make use of a dynamic temperature $ T_dyn $, that is dynamically adapted throughout the training process. The temperature is modeled as a temperature module that gets learned in an adversarial manner. The temperature module is optimized in the opposite direction of the student, trying to maximize the distillation loss with the update shown in equation \ref{eq:temp_gradient}, where $ \theta $ refers to the temperature parameter and $ \mu $ is the learning rate \cite{liCurriculumTemperatureKnowledge2022}.
+Curriculum learning is a technique, where the learning difficulty is increased through the training process \cite{liCurriculumTemperatureKnowledge2022}. In contrast to a static and heuristically chosen hyperparameter $ T $ in the introduced methods so far, Zheng et al. make use of a dynamic temperature, that is dynamically adapted throughout the training process. The temperature is modeled as a temperature module that gets learned in an adversarial manner. The temperature module is optimized in the opposite direction of the student, trying to maximize the distillation loss with the update shown in equation \ref{eq:temp_gradient}, where $ \theta $ refers to the temperature parameter and $ \mu $ is the learning rate \cite{liCurriculumTemperatureKnowledge2022}.
 
 
 \begin{equation}
