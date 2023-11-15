@@ -225,7 +225,17 @@ All experiments are conducted with a single \textit{Nvidia A40} GPU.
 \end{figure}
 
 \section{Results}
-Figure \ref{fig:acc_res} depicts the validation accuracy of the teacher model, represented by a red dashed line, along with the best model trained with Knowledge Distillation (KD) and the model trained from scratch for each of the four student architectures. Notably, the validation accuracies of the models trained with KD closely align with that of the teacher model, indicating successful knowledge transfer. They also marginally yet consistently outperform the models trained from scratch for each student architecture. This indicates that all architectures perform comparably well and that KD offers a consistent advantage. The validation accuracy is very close to the teacher for all student architectures, as shown in Figures \ref{fig:val_acc_ghostnet}, \ref{fig:val_acc_mobilenet_large}, \ref{fig:val_acc_mobilenet_small} and \ref{fig:val_acc_shufflenet}.
+In our experiments, we introduce a metric called "Relative Validation Accuracy" (RVA) to evaluate the performance of student models in the context of Knowledge Distillation (KD). The RVA is calculated as the ratio of the validation accuracy of the student model to the validation accuracy of the teacher model. Mathematically, it can be expressed as:
+
+\begin{equation}
+	\label{eq:RVA}
+	\text{RVA} = \frac{\text{Validation Accuracy of Teacher Model}}{\text{Validation Accuracy of Student Model}}
+\end{equation}
+
+This metric provides a measure of how close the student model's performance is to the teacher model's performance. For instance, an RVA of 90\% indicates that the student model's validation accuracy is 90\% of the teacher model's validation accuracy. In our case, the teacher model achieved a validation accuracy of 99.6\%. Therefore, a student model with an RVA of 95\% would have a validation accuracy of approximately 94.62\%.
+By using RVA, we can effectively compare the performance of different student models and understand their effectiveness in approximating the teacher model's performance.
+
+Figure \ref{fig:acc_res} depicts the absolute validation accuracy of the teacher model, represented by a red dashed line, along with the best model trained with KD and the model trained from scratch for each of the four student architectures. Notably, the validation accuracies of the models trained with KD closely align with that of the teacher model, indicating successful knowledge transfer. They also marginally yet consistently outperform the models trained from scratch for each student architecture. This indicates that all architectures perform comparably well and that KD offers a consistent advantage. The validation accuracy is very close to the teacher for all student architectures, as shown in Figures \ref{fig:val_acc_ghostnet}, \ref{fig:val_acc_mobilenet_large}, \ref{fig:val_acc_mobilenet_small} and \ref{fig:val_acc_shufflenet}.
 
 \begin{figure}[htbp]
 	\centering
@@ -304,7 +314,7 @@ These findings confirm that student models trained with KD not only match the pe
 
 The use of KD in this context has significant practical implications. By reducing memory requirements and increasing inference speed, these models could potentially be deployed locally in resource-constrained environments, such as medical equipment. This would enable real-time prediction of echocardiogram views, leading to more efficient and accurate diagnoses in the medical field.
 
-However, it’s important to note that the search space for different hyperparameter combinations was heavily restricted due to significant training times and project course time constraints. This limitation could potentially be addressed in future research by allowing for a larger search space for hyperparameter combinations and conducting multiple runs of each experiment setup to ensure statistical significance.
+However, it's important to note that the search space for different hyperparameter combinations was heavily restricted due to significant training times and project course time constraints. This limitation could potentially be addressed in future research by allowing for a larger search space for hyperparameter combinations and conducting multiple runs of each experiment setup to ensure statistical significance.
 
 In conclusion, this study underscores the effectiveness of KD in enhancing the performance of student models in echocardiogram view classification. It also emphasizes the importance of selecting appropriate hyperparameters based on the specific student architecture used. Future research could explore more student architectures and other model compression techniques such as quantization and pruning or a combination thereof.
 
